@@ -1,4 +1,4 @@
-# hamronotes-dashboard
+# jyoti4nepal-dashboard
 
 <div align="center" style="margin: 30px;">
     <a href="https://refine.dev">
