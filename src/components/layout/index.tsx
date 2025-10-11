@@ -50,10 +50,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         ].join(" ")}
       >
         {/* Admin Panel Header */}
-        <div className="flex items-center gap-3 p-4">
-          <Image width={44} height={44} src="/dashboard-logo.svg" alt="jyoti" />
-          <span className="text-lg font-semibold text-gray-800">Admin Panel</span>
-        </div>
+        <Link href={"/dashboard"}>
+            <div className="flex items-center gap-3 p-4">
+              <Image width={44} height={44} src="/dashboard-logo.svg" alt="jyoti" />
+              <span className="text-lg font-semibold text-gray-800">Admin Panel</span>
+            </div>
+        </Link>
 
         {/* Sidebar nav */}
         <nav className="p-4">
