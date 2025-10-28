@@ -1,14 +1,13 @@
-import React from 'react'
-import AdminShell from '@components/layout'
+"use client";
 
-const Adminlayout = ({children}:{
-    children:React.ReactNode
-}) => {
+import React from "react";
+import AdminShell from "@components/layout";
+import RequireAuth from "@providers/require-auth";
+
+export default function Adminlayout({ children }: { children: React.ReactNode }) {
   return (
-    <AdminShell>
-        {children}
-    </AdminShell>
-  )
+    <RequireAuth>
+      <AdminShell>{children}</AdminShell>
+    </RequireAuth>
+  );
 }
-
-export default Adminlayout

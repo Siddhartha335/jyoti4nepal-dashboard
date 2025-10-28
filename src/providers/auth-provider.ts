@@ -1,27 +1,46 @@
+// src/providers/auth-provider.ts
 import { AuthProvider } from "@refinedev/core";
 
 export const authProvider: AuthProvider = {
   login: async ({ email, password }) => {
-    // Replace with your real API call
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/user/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/user/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
-    if (res.ok) {
-      const { token } = await res.json();
+      const data = await res.json().catch(() => ({} as any));
+
+      // If HTTP not OK → throw
+      if (!res.ok) {
+        const msg =
+          data?.message ||
+          data?.error ||
+          data?.errors?.[0]?.msg ||
+          `${res.status} ${res.statusText}`;
+        throw new Error(msg);
+      }
+
+      // If API returned OK but no token (some backends respond 200 with an error message) → throw
+      const { token } = data ?? {};
+      if (!token) {
+        const msg =
+          data?.message ||
+          data?.error ||
+          "Invalid email or password";
+        throw new Error(msg);
+      }
+
       localStorage.setItem("token", token);
-      return { success: true, redirectTo: "/" };
+      return { success: true, redirectTo: "/dashboard" };
+    } catch (e: any) {
+      // Network or explicit throws above land here — rethrow so refine treats it as an error
+      throw new Error(e?.message ?? "Network error");
     }
-
-    return {
-      success: false,
-      error: {
-        message: "Login failed",
-        name: "Invalid credentials",
-      },
-    };
   },
 
   logout: async () => {
@@ -34,7 +53,7 @@ export const authProvider: AuthProvider = {
     if (token) return { authenticated: true };
     return {
       authenticated: false,
-      error: { message: "Unauthorized", name: "Unauthorized" },
+      error: { name: "Unauthorized", message: "Unauthorized" },
       redirectTo: "/login",
     };
   },
@@ -42,12 +61,10 @@ export const authProvider: AuthProvider = {
   getIdentity: async () => {
     const token = localStorage.getItem("token");
     if (!token) return null;
-    // Optionally decode or fetch user info
     return { id: 1, name: "Admin" };
   },
 
-  onError: async (error) => {
-    console.error("Auth Error:", error);
+  onError: async () => {
     return {};
   },
 };

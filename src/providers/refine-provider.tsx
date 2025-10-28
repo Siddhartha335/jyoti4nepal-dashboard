@@ -1,3 +1,5 @@
+//src/providers/refine-provider.tsx
+
 "use client";
 
 import { Refine } from "@refinedev/core";
@@ -16,7 +18,7 @@ export const RefineProvider = ({ children }: { children: React.ReactNode }) => {
         name: "dashboard",
         list: "/dashboard",
       }, {
-        name: "blogs",
+        name: "blog",
         list: "/blogs",
         create: "/blogs/create",
         edit: "/blogs/[id]/edit",
@@ -55,13 +57,8 @@ export const RefineProvider = ({ children }: { children: React.ReactNode }) => {
         create: "/departments/create",
         edit: "/departments/[id]/edit",
         show: "/departments/[id]",
-      }, {
-        name: "blogs",
-        list: "/blogs",
-        create: "/blogs/create",
-        edit: "/blogs/edit/:id",
-        show: "/blogs/show/:id"
-      }]}
+      }
+    ]}
       options={{
         syncWithLocation: true,
         warnWhenUnsavedChanges: true,

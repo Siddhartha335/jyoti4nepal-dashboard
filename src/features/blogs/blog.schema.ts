@@ -11,9 +11,9 @@ export const BlogSchema = z.object({
     .optional()
     .or(z.literal("")),
   content: z.string().min(20, "Content must be at least 20 characters."),
-  status: z.enum(["Draft", "Published", "Scheduled"]),
+  status: z.enum(["Draft", "Published"]),
   tags: z.array(z.string().min(1)).max(10, "You can add up to 10 tags.").optional(),
-  cover: z
+  cover_image: z
     .custom<File | null>()
     .refine(
       (file) => !file || (file && ACCEPTED_IMAGE_TYPES.includes(file.type as typeof ACCEPTED_IMAGE_TYPES[number])),

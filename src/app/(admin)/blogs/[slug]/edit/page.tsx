@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Upload, Tag as TagIcon, X } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCreate } from "@refinedev/core";
+import { useOne, useUpdate } from "@refinedev/core";
+import Image from "next/image";
 
 import {
   BlogSchema,
@@ -13,11 +14,33 @@ import {
 } from "@/features/blogs/blog.schema";
 import toast from "react-hot-toast";
 
-const CreateBlogPage = () => {
-  const { mutateAsync, isLoading } = useCreate<BlogFormValues>();
+type Blog = {
+  blog_id: string;
+  title: string;
+  description: string;
+  content: string;
+  status: "Published" | "Draft";
+  tags: string[];
+  cover_image: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const EditBlogPage = () => {
   const router = useRouter();
+  const params = useParams();
+  const id = params?.slug as string;
+
+  const { mutateAsync, isLoading: isUpdating } = useUpdate<BlogFormValues>();
+  const { data, isLoading } = useOne<Blog>({
+    resource: "blog",
+    id,
+  });
+
+  const blog = data?.data;
 
   const [tagInput, setTagInput] = useState("");
+  const [existingImage, setExistingImage] = useState<string | null>(null);
 
   const {
     register,
@@ -25,6 +48,7 @@ const CreateBlogPage = () => {
     control,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<BlogFormValues>({
     resolver: zodResolver(BlogSchema),
@@ -40,6 +64,22 @@ const CreateBlogPage = () => {
   });
 
   const tags = watch("tags") || [];
+  const coverImage = watch("cover_image");
+
+  // Prefill form when blog data is loaded
+  useEffect(() => {
+    if (blog) {
+      reset({
+        title: blog.title,
+        description: blog.description,
+        content: blog.content,
+        status: blog.status,
+        tags: blog.tags,
+        cover_image: undefined, // Don't set file here
+      });
+      setExistingImage(blog.cover_image);
+    }
+  }, [blog, reset]);
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -61,17 +101,50 @@ const CreateBlogPage = () => {
       try {
         const payload = { ...formData, status };
         
-        await mutateAsync({ 
+        await mutateAsync({
           resource: "blog",
-          values: payload 
+          id,
+          values: payload,
         });
-        toast.success("Blog post created successfully!");
+        toast.success("Blog updated successfully");
+
         router.push("/blogs");
       } catch (error) {
-        console.error("Error creating blog:", error);
-        toast.error("Failed to create blog post. Please try again.");
+        console.error("Error updating blog:", error);
+        toast.error("Failed to update blog. Please try again.");    
       }
     });
+
+  if (isLoading) {
+    return (
+      <div className="mt-2">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#CE9F41] border-r-transparent"></div>
+            <p className="mt-4 text-sm text-gray-600">Loading blog...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!blog) {
+    return (
+      <div className="mt-2">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-lg font-medium text-red-600">Blog not found</p>
+            <button
+              onClick={() => router.back()}
+              className="mt-4 text-sm text-[#7B5B12] underline underline-offset-2"
+            >
+              Go back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-2">
@@ -85,24 +158,22 @@ const CreateBlogPage = () => {
           <span className="text-sm">Back</span>
         </button>
 
-        <h1 className="text-xl sm:text-2xl text-gray-800">
-          Create New Blog Post
-        </h1>
+        <h1 className="text-xl sm:text-2xl text-gray-800">Edit Blog Post</h1>
 
         <div className="flex items-center gap-3">
           <button
             onClick={submitWithStatus("Draft")}
-            disabled={isSubmitting || isLoading}
+            disabled={isSubmitting || isUpdating}
             className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
           >
-            {isLoading ? "Saving..." : "Save as Draft"}
+            {isUpdating ? "Saving..." : "Save as Draft"}
           </button>
           <button
             onClick={submitWithStatus("Published")}
-            disabled={isSubmitting || isLoading}
+            disabled={isSubmitting || isUpdating}
             className="rounded-xl bg-[#CE9F41] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-60"
           >
-            {isLoading ? "Publishing..." : "Publish"}
+            {isUpdating ? "Publishing..." : "Publish"}
           </button>
         </div>
       </div>
@@ -167,7 +238,7 @@ const CreateBlogPage = () => {
               render={({ field: { onChange, value } }) => {
                 const [preview, setPreview] = React.useState<string | null>(null);
 
-                // Update preview only when file changes
+                // Update preview when file changes
                 React.useEffect(() => {
                   if (value instanceof File) {
                     const url = URL.createObjectURL(value);
@@ -180,20 +251,34 @@ const CreateBlogPage = () => {
                 const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
                   const file = e.target.files?.[0] ?? null;
                   onChange(file);
+                  if (file) {
+                    setExistingImage(null); // Clear existing image when new file selected
+                  }
                 };
+
+                // Show preview if new file selected, otherwise show existing image
+                const imageToShow = preview || (existingImage ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${existingImage}` : null);
 
                 return (
                   <>
                     <div className="rounded-xl border-2 border-dashed border-gray-300 bg-white p-4 text-center">
-                      {preview ? (
-                        <div className="mb-3">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={preview}
-                            alt="Cover preview"
-                            className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover"
-                            decoding="async"
-                          />
+                      {imageToShow ? (
+                        <div className="mb-3 relative">
+                          <div className="relative h-40 w-full max-w-xs mx-auto rounded-lg overflow-hidden">
+                            <Image
+                              src={imageToShow}
+                              alt="Cover preview"
+                              fill
+                              className="object-cover"
+                              decoding="async"
+                            />
+                          </div>
+                          {existingImage && !preview && (
+                            <p className="mt-2 text-xs text-gray-500">Current image</p>
+                          )}
+                          {preview && (
+                            <p className="mt-2 text-xs text-green-600">New image selected</p>
+                          )}
                         </div>
                       ) : (
                         <div className="mb-3 flex flex-col items-center justify-center gap-2 text-gray-500">
@@ -214,7 +299,7 @@ const CreateBlogPage = () => {
                         htmlFor="cover"
                         className="inline-block cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                       >
-                        Choose File
+                        {imageToShow ? "Change Image" : "Choose File"}
                       </label>
                     </div>
 
@@ -290,4 +375,4 @@ const CreateBlogPage = () => {
   );
 };
 
-export default CreateBlogPage;
+export default EditBlogPage;

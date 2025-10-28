@@ -6,22 +6,25 @@ import Image from "next/image";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const { mutateAsync: login, isLoading } = useLogin(); // using mutateAsync instead of mutate
+  const { mutate: login, isLoading } = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const result = await login({ email, password });
-      if (result.success) {
-        toast.success("Login successful");
-      } else {
-        toast.error(result.error?.message || "Login failed");
+    
+    login(
+      { email, password },
+      {
+        onSuccess: () => {
+          toast.success("Login successful!");
+        },
+        onError: (error: any) => {
+          console.error("Login error:", error);
+          toast.error(error?.message || "Invalid email or password");
+        },
       }
-    } catch (err: any) {
-      toast.error(err?.message || "Something went wrong");
-    }
+    );
   };
 
   return (
@@ -32,8 +35,7 @@ export default function LoginPage() {
           className="w-full max-w-sm space-y-4 bg-white p-6 rounded shadow"
         >
           <Link href="/login">
-            {' '}
-            <div className='flex items-center justify-center p-5 '>
+            <div className='flex items-center justify-center p-5'>
               <Image
                 width={200}
                 height={60}
@@ -49,22 +51,32 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="w-full p-2 border rounded focus:outline-none focus:border-[#CE9F41]"
+            required
+            disabled={isLoading}
+            className="w-full p-2 border rounded focus:outline-none focus:border-[#CE9F41] disabled:opacity-60 disabled:cursor-not-allowed"
           />
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
-            className="w-full p-2 border rounded focus:outline-none focus:border-[#CE9F41]"
+            required
+            disabled={isLoading}
+            className="w-full p-2 border rounded focus:outline-none focus:border-[#CE9F41] disabled:opacity-60 disabled:cursor-not-allowed"
           />
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="remember" className="w-4 h-4 accent-[#CE9F41]" />
-            <label htmlFor="remember">Remember this device</label>
+            <input 
+              type="checkbox" 
+              id="remember" 
+              className="w-4 h-4 accent-[#CE9F41]"
+              disabled={isLoading}
+            />
+            <label htmlFor="remember" className="text-sm">Remember this device</label>
           </div>
           <button
             type="submit"
-            className="w-full bg-[#CE9F41] text-white py-2 rounded hover:bg-[#CE9F41]"
+            disabled={isLoading}
+            className="w-full bg-[#CE9F41] text-white py-2 rounded hover:brightness-95 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
           >
             {isLoading ? "Logging in..." : "Login"}
           </button>
