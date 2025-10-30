@@ -1,27 +1,40 @@
 "use client";
 import { useLogin } from "@refinedev/core";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const { mutate: login, isLoading } = useLogin();
+  const { mutate: login, isLoading, isError, error } = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Show error toast when error state changes
+  useEffect(() => {
+    if (isError && error) {
+      const errorMessage = 
+        error?.message?.includes("expired") || error?.name === "TokenExpired"
+          ? "Your session has expired. Please login again."
+          : error?.message || "Invalid email or password";
+      
+      toast.error(errorMessage);
+    }
+  }, [isError, error]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
     login(
-      { email, password },
+      { email, password, rememberMe },
       {
         onSuccess: () => {
-          toast.success("Login successful!");
-        },
-        onError: (error: any) => {
-          console.error("Login error:", error);
-          toast.error(error?.message || "Invalid email or password");
+          toast.success(
+            rememberMe 
+              ? "Login successful! Session will last 30 days." 
+              : "Login successful!"
+          );
         },
       }
     );
@@ -68,10 +81,14 @@ export default function LoginPage() {
             <input 
               type="checkbox" 
               id="remember" 
-              className="w-4 h-4 accent-[#CE9F41]"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 accent-[#CE9F41] cursor-pointer"
               disabled={isLoading}
             />
-            <label htmlFor="remember" className="text-sm">Remember this device</label>
+            <label htmlFor="remember" className="text-sm cursor-pointer select-none">
+              Remember me for 30 days
+            </label>
           </div>
           <button
             type="submit"

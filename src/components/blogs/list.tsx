@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, Search, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
+import React, { useMemo, useState, useEffect } from "react";
+import { Plus, Search, ChevronLeft, ChevronRight, ArrowUpWideNarrow, ArrowDownWideNarrow } from "lucide-react";
 import Link from "next/link";
 import { useList, CrudFilters, useDelete } from "@refinedev/core";
 import { useRouter } from "next/navigation";
@@ -33,13 +33,24 @@ const STATUS_STYLES: Record<BlogRow["status"], { wrap: string; dot: string; text
   },
 };
 
-
+// small debounce helper
+function useDebounced<T>(value: T, delay = 400) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return v;
+}
 
 const ListPage = () => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounced(searchQuery, 400);
+
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
+
   const [statusFilter, setStatusFilter] = useState<"all" | "Published" | "Draft">("all");
   const [sortField, setSortField] = useState<"title" | "createdAt" | "updatedAt">("updatedAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -55,17 +66,21 @@ const ListPage = () => {
     blogTitle: "",
   });
 
-  // Initialize delete hook at component level
+  // Initialize delete hook
   const { mutate: deleteBlog, isLoading: isDeleting } = useDelete();
 
-  // Build filters array with proper typing
-  const filters: CrudFilters = [];
-  if (statusFilter !== "all") {
-    filters.push({ field: "status", operator: "eq", value: statusFilter });
-  }
-  if (searchQuery.trim()) {
-    filters.push({ field: "search", operator: "contains", value: searchQuery.trim() });
-  }
+  // Build filters array (uses your dataProvider mapping 1:1 into query params)
+  const filters: CrudFilters = useMemo(() => {
+    const f: CrudFilters = [];
+    if (statusFilter !== "all") {
+      f.push({ field: "status", operator: "eq", value: statusFilter });
+    }
+    if (debouncedSearch.trim()) {
+      // Keep the same "search" field you already used in your blog dataProvider
+      f.push({ field: "search", operator: "contains", value: debouncedSearch.trim() });
+    }
+    return f;
+  }, [statusFilter, debouncedSearch]);
 
   // Fetch blogs using Refine's useList hook
   const { data, isLoading, isError, refetch } = useList<BlogRow>({
@@ -74,61 +89,50 @@ const ListPage = () => {
       current: currentPage,
       pageSize: pageSize,
     },
-    sorters: [
-      {
-        field: sortField,
-        order: sortOrder,
-      },
-    ],
+    sorters: [{ field: sortField, order: sortOrder }],
     filters: filters.length > 0 ? filters : undefined,
+    queryOptions: {
+      keepPreviousData: true, // smooth pagination/search
+    },
   });
 
   const blogs = data?.data || [];
   const total = data?.total || 0;
-  const totalPages = Math.ceil(total / pageSize);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
       setSortOrder("desc");
     }
-    setCurrentPage(1);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  // whenever filters/sort/pageSize change, reset to page 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, debouncedSearch, sortField, sortOrder, pageSize]);
+
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
-  };
 
   const openDeleteModal = (id: string, title: string) => {
-    setDeleteModal({
-      isOpen: true,
-      blogId: id,
-      blogTitle: title,
-    });
+    setDeleteModal({ isOpen: true, blogId: id, blogTitle: title });
   };
 
   const closeDeleteModal = () => {
-    setDeleteModal({
-      isOpen: false,
-      blogId: null,
-      blogTitle: "",
-    });
+    setDeleteModal({ isOpen: false, blogId: null, blogTitle: "" });
   };
 
   const confirmDelete = () => {
     if (!deleteModal.blogId) return;
-
     deleteBlog(
-      {
-        resource: "blog",
-        id: deleteModal.blogId,
-      },
+      { resource: "blog", id: deleteModal.blogId },
       {
         onSuccess: () => {
           toast.success("Blog deleted successfully");
@@ -139,7 +143,7 @@ const ListPage = () => {
           console.error("Delete error:", error);
           toast.error("Failed to delete blog");
         },
-      }
+      },
     );
   };
 
@@ -147,6 +151,7 @@ const ListPage = () => {
     <div className="mt-2">
       {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
+        title="Blog"
         isOpen={deleteModal.isOpen}
         onClose={closeDeleteModal}
         onConfirm={confirmDelete}
@@ -157,9 +162,7 @@ const ListPage = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">Blog Management</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Create and manage your blog posts
-        </p>
+        <p className="mt-1 text-sm text-gray-600">Create and manage your blog posts</p>
       </div>
 
       {/* Filters & Actions */}
@@ -170,21 +173,34 @@ const ListPage = () => {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search blogs by title, description, or content..."
-              className="w-full rounded-xl border border-gray-200 bg-[#78788029] pl-9 pr-3 py-2 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-gray-300"
+              className="w-full rounded-xl border border-gray-200 bg-white/60 pl-9 pr-3 py-2 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-gray-300"
             />
           </div>
 
-          <Link href="/blogs/create">
-            <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#CE9F41] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 whitespace-nowrap">
-              <Plus className="h-4 w-4" />
-              New Blog Post
-            </button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* Page size selector */}
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(parseInt(e.target.value, 10))}
+              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800"
+              title="Items per page"
+            >
+              {[10, 20, 50].map((n) => (
+                <option key={n} value={n}>
+                  {n} / page
+                </option>
+              ))}
+            </select>
+
+            <Link href="/blogs/create">
+              <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#CE9F41] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 whitespace-nowrap">
+                <Plus className="h-4 w-4" />
+                New Blog Post
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* Status Filter */}
@@ -194,10 +210,7 @@ const ListPage = () => {
             {(["all", "Published", "Draft"] as const).map((status) => (
               <button
                 key={status}
-                onClick={() => {
-                  setStatusFilter(status);
-                  setCurrentPage(1);
-                }}
+                onClick={() => setStatusFilter(status)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   statusFilter === status
                     ? "bg-[#CE9F41] text-white"
@@ -221,11 +234,15 @@ const ListPage = () => {
                   <button
                     onClick={() => handleSort("title")}
                     className="inline-flex items-center gap-1 hover:text-gray-900 transition"
+                    title={`Sort by Title (${sortField === "title" ? sortOrder : "desc"})`}
                   >
                     Title
-                    {sortField === "title" && (
-                      <ArrowUpDown className="h-3 w-3" />
-                    )}
+                    {sortField === "title" &&
+                      (sortOrder === "asc" ? (
+                        <ArrowUpWideNarrow className="h-3.5 w-3.5" />
+                      ) : (
+                        <ArrowDownWideNarrow className="h-3.5 w-3.5" />
+                      ))}
                   </button>
                 </th>
                 <th className="px-4 py-3 font-medium w-[15%]">Status</th>
@@ -233,22 +250,30 @@ const ListPage = () => {
                   <button
                     onClick={() => handleSort("createdAt")}
                     className="inline-flex items-center gap-1 hover:text-gray-900 transition"
+                    title={`Sort by Created (${sortField === "createdAt" ? sortOrder : "desc"})`}
                   >
                     Created
-                    {sortField === "createdAt" && (
-                      <ArrowUpDown className="h-3 w-3" />
-                    )}
+                    {sortField === "createdAt" &&
+                      (sortOrder === "asc" ? (
+                        <ArrowUpWideNarrow className="h-3.5 w-3.5" />
+                      ) : (
+                        <ArrowDownWideNarrow className="h-3.5 w-3.5" />
+                      ))}
                   </button>
                 </th>
                 <th className="px-4 py-3 font-medium w-[15%]">
                   <button
                     onClick={() => handleSort("updatedAt")}
                     className="inline-flex items-center gap-1 hover:text-gray-900 transition"
+                    title={`Sort by Updated (${sortField === "updatedAt" ? sortOrder : "desc"})`}
                   >
                     Updated
-                    {sortField === "updatedAt" && (
-                      <ArrowUpDown className="h-3 w-3" />
-                    )}
+                    {sortField === "updatedAt" &&
+                      (sortOrder === "asc" ? (
+                        <ArrowUpWideNarrow className="h-3.5 w-3.5" />
+                      ) : (
+                        <ArrowDownWideNarrow className="h-3.5 w-3.5" />
+                      ))}
                   </button>
                 </th>
                 <th className="px-4 py-3 font-medium w-[10%]">Tags</th>
@@ -258,10 +283,7 @@ const ListPage = () => {
             <tbody>
               {isLoading && (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="rounded-xl bg-white px-4 py-10 text-center text-sm text-gray-500 shadow-sm"
-                  >
+                  <td colSpan={6} className="rounded-xl bg-white px-4 py-10 text-center text-sm text-gray-500 shadow-sm">
                     Loading blogs...
                   </td>
                 </tr>
@@ -269,10 +291,7 @@ const ListPage = () => {
 
               {isError && (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="rounded-xl bg-white px-4 py-10 text-center text-sm text-red-500 shadow-sm"
-                  >
+                  <td colSpan={6} className="rounded-xl bg-white px-4 py-10 text-center text-sm text-red-500 shadow-sm">
                     Error loading blogs. Please try again.
                   </td>
                 </tr>
@@ -280,10 +299,7 @@ const ListPage = () => {
 
               {!isLoading && !isError && blogs.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="rounded-xl bg-white px-4 py-10 text-center text-sm text-gray-500 shadow-sm"
-                  >
+                  <td colSpan={6} className="rounded-xl bg-white px-4 py-10 text-center text-sm text-gray-500 shadow-sm">
                     No blogs found. Try a different search or create a new blog post.
                   </td>
                 </tr>
@@ -293,16 +309,13 @@ const ListPage = () => {
                 !isError &&
                 blogs.map((blog) => {
                   const s = STATUS_STYLES[blog.status as keyof typeof STATUS_STYLES] || STATUS_STYLES.Draft;
-                  
                   return (
                     <tr key={blog.blog_id} className="align-middle">
                       <td className="rounded-l-xl bg-white px-4 py-4 text-sm font-medium text-gray-900 shadow-sm">
                         <div className="line-clamp-2">{blog.title}</div>
                       </td>
                       <td className="bg-white px-4 py-4 text-sm shadow-sm">
-                        <span
-                          className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${s.wrap}`}
-                        >
+                        <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${s.wrap}`}>
                           <span className={`h-2 w-2 rounded-full ${s.dot}`} />
                           {s.text}
                         </span>
@@ -316,8 +329,7 @@ const ListPage = () => {
                       <td className="bg-white px-4 py-4 text-sm text-gray-700 shadow-sm">
                         <div className="line-clamp-1 text-xs">
                           {blog.tags.length > 0
-                            ? blog.tags.slice(0, 2).join(", ") +
-                              (blog.tags.length > 2 ? "..." : "")
+                            ? blog.tags.slice(0, 2).join(", ") + (blog.tags.length > 2 ? "..." : "")
                             : "—"}
                         </div>
                       </td>
@@ -353,59 +365,56 @@ const ListPage = () => {
         </div>
 
         {/* Pagination */}
-        {!isLoading && !isError && totalPages > 1 && (
-          <div className="mt-4 flex items-center justify-between px-2">
+        {!isLoading && !isError && (
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2">
             <div className="text-sm text-gray-600">
-              Showing {(currentPage - 1) * pageSize + 1} to{" "}
+              Showing {blogs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{" "}
               {Math.min(currentPage * pageSize, total)} of {total} results
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
 
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) pageNum = i + 1;
+                    else if (currentPage <= 3) pageNum = i + 1;
+                    else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                    else pageNum = currentPage - 2 + i;
 
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`min-w-[32px] rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                        currentPage === pageNum
-                          ? "bg-[#CE9F41] text-white"
-                          : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`min-w-[32px] rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                          currentPage === pageNum
+                            ? "bg-[#CE9F41] text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
-
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+            )}
           </div>
         )}
       </div>

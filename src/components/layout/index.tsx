@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLogout } from "@refinedev/core";
 import { useState } from "react";
-import { Toaster } from "react-hot-toast";
 import Image from "next/image";
 import {
   LayoutDashboard,
@@ -39,8 +38,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="h-screen overflow-hidden bg-gray-100">
-      <Toaster position="top-right" />
-
       {/* Fixed sidebar */}
       <aside
         className={[

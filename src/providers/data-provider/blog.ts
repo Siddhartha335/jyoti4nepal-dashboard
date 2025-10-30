@@ -1,4 +1,3 @@
-// src/providers/data-provider/blog-data-provider.ts
 import type { AxiosInstance } from "axios";
 
 // Turn the blog payload into multipart/form-data for Express + multer
@@ -80,6 +79,7 @@ export const createBlogDataProvider = (axiosInstance: AxiosInstance) => ({
   async create({ variables }: any) {
     try {
       const form = toFormData(variables);
+      console.log("Sending POST to /api/v1/gallery");
       const { data } = await axiosInstance.post(`/api/v1/blog`, form);
       return { data: normalizeResponse(data) };
     } catch (error) {

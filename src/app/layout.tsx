@@ -3,6 +3,7 @@ import React, { Suspense } from "react";
 import "@styles/global.css";
 import { RefineProvider } from "@providers/refine-provider";
 import { Toaster } from "react-hot-toast";
+import { AuthGuard } from "@providers/AuthGuard";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -21,10 +22,12 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Suspense>
-              <RefineProvider>{children}</RefineProvider>
-              <Toaster 
-                position="bottom-right"
-              />
+              <RefineProvider>
+                <AuthGuard>
+                  {children}
+                </AuthGuard>
+                <Toaster position="top-right" />
+              </RefineProvider>
         </Suspense>
       </body>
     </html>

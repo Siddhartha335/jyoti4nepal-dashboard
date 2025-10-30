@@ -1,12 +1,14 @@
 import { X, AlertTriangle } from "lucide-react";
 
 const DeleteConfirmModal = ({
+  title,
   isOpen,
   onClose,
   onConfirm,
   blogTitle,
   isDeleting,
 }: {
+  title: string;
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -43,7 +45,7 @@ const DeleteConfirmModal = ({
         {/* Content */}
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Delete Blog Post
+            Delete {title}
           </h3>
           <p className="text-sm text-gray-600 mb-1">
             Are you sure you want to delete

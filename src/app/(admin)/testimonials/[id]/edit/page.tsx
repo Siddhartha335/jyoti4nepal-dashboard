@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Star, Upload } from "lucide-react";
-import { useCreate } from "@refinedev/core";
+import { useOne, useUpdate } from "@refinedev/core";
 import toast from "react-hot-toast";
 
 import {
@@ -13,15 +13,38 @@ import {
   type TestimonialForm,
 } from "@/features/testimonials/testimonial.schema";
 
-const CreateTestimonial = () => {
+type Testimonial = {
+  testimonial_id: string;
+  name: string;
+  email: string;
+  status: "Published" | "Draft";
+  content: string;
+  rating: 1 | 2 | 3 | 4 | 5;
+  featured: "Featured" | "Normal";
+  company_logo: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const EditTestimonial = () => {
   const router = useRouter();
-  const { mutate: createTestimonial, isLoading } = useCreate();
+  const params = useParams();
+  const id = params?.id as string;
+
+  // Fetch existing testimonial data
+  const { data, isLoading: isFetching } = useOne<Testimonial>({
+    resource: "testimonial",
+    id: id,
+  });
+
+  const { mutate: updateTestimonial, isLoading: isUpdating } = useUpdate();
 
   const {
     register,
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    reset,
+    formState: { errors },
   } = useForm<TestimonialForm>({
     resolver: zodResolver(TestimonialSchema),
     defaultValues: {
@@ -35,41 +58,63 @@ const CreateTestimonial = () => {
     mode: "onTouched",
   });
 
-  const onSubmit =
-  (status: "Draft" | "Published") =>
-  async (values: TestimonialForm) => {
-    if (!values.company_logo) {
-      toast.error("Please upload a company logo");
-      return;
+  // Prefill form when data is loaded
+  useEffect(() => {
+    if (data?.data) {
+      reset({
+        name: data.data.name,
+        email: data.data.email,
+        content: data.data.content,
+        rating: data.data.rating,
+        featured: data.data.featured,
+        company_logo: null, // Don't prefill file input
+      });
     }
+  }, [data, reset]);
 
-    createTestimonial(
-      {
-        resource: "testimonial",
-        values: {
-          company_logo: values.company_logo,
-          name: values.name,
-          email: values.email,
-          content: values.content,
-          rating: values.rating,
-          featured: values.featured,
-          status: status,
+  const onSubmit =
+    (status: "Draft" | "Published") => async (values: TestimonialForm) => {
+      updateTestimonial(
+        {
+          resource: "testimonial",
+          id: id,
+          values: {
+            company_logo: values.company_logo || undefined,
+            name: values.name,
+            email: values.email,
+            content: values.content,
+            rating: values.rating,
+            featured: values.featured,
+            status: status,
+          },
         },
-      },
-      {
-        onSuccess: () => {
-          toast.success("Testimonial created successfully!");
-          router.push("/testimonials");
-        },
-        onError: (error: any) => {
-          console.error("Failed to create testimonial:", error);
-          toast.error(
-            error?.response?.data?.message || "Failed to create testimonial. Please try again."
-          );
-        },
-      }
+        {
+          onSuccess: () => {
+            toast.success("Testimonial updated successfully!");
+            router.push(`/testimonials/${id}`);
+          },
+          onError: (error: any) => {
+            console.error("Failed to update testimonial:", error);
+            toast.error(
+              error?.response?.data?.message || "Failed to update testimonial. Please try again."
+            );
+          },
+        }
+      );
+    };
+
+  if (isFetching) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-[#CE9F41]"></div>
+          <p className="mt-4 text-sm text-gray-600">Loading testimonial...</p>
+        </div>
+      </div>
     );
-  };
+  }
+
+  const testimonial = data?.data;
 
   return (
     <div className="mt-2">
@@ -83,24 +128,22 @@ const CreateTestimonial = () => {
           <span className="text-sm">Back</span>
         </button>
 
-        <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">
-          Add New Testimonial
-        </h1>
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">Edit Testimonial</h1>
 
         <div className="flex items-center gap-3">
           <button
-            disabled={isSubmitting || isLoading}
+            disabled={isUpdating}
             onClick={handleSubmit(onSubmit("Draft"))}
             className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
           >
             Save as Draft
           </button>
           <button
-            disabled={isSubmitting || isLoading}
+            disabled={isUpdating}
             onClick={handleSubmit(onSubmit("Published"))}
             className="rounded-xl bg-[#CE9F41] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-60"
           >
-            {isLoading ? "Publishing..." : "Publish"}
+            {isUpdating ? "Updating..." : "Update & Publish"}
           </button>
         </div>
       </div>
@@ -139,9 +182,19 @@ const CreateTestimonial = () => {
 
           {/* Company Logo */}
           <div className="md:col-span-2 rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-4">
-            <h3 className="mb-3 text-sm font-semibold text-gray-800">
-              Company Logo <span className="text-red-500">*</span>
-            </h3>
+            <h3 className="mb-3 text-sm font-semibold text-gray-800">Company Logo</h3>
+
+            {/* Show current logo */}
+            {testimonial?.company_logo && (
+              <div className="mb-3">
+                <p className="mb-2 text-xs text-gray-600">Current logo:</p>
+                <img
+                  src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${testimonial.company_logo}`}
+                  alt="Current logo"
+                  className="h-16 w-16 rounded-lg border border-gray-200 object-contain p-2"
+                />
+              </div>
+            )}
 
             <Controller
               name="company_logo"
@@ -171,7 +224,7 @@ const CreateTestimonial = () => {
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={preview}
-                            alt="Company logo preview"
+                            alt="New logo preview"
                             className="mx-auto h-24 w-24 rounded-lg object-contain"
                             decoding="async"
                           />
@@ -179,7 +232,7 @@ const CreateTestimonial = () => {
                       ) : (
                         <div className="mb-3 flex flex-col items-center justify-center gap-2 text-gray-500">
                           <Upload className="h-6 w-6" />
-                          <p className="text-sm">Click to upload or drag and drop</p>
+                          <p className="text-sm">Upload new logo (optional)</p>
                         </div>
                       )}
                       <input
@@ -217,9 +270,7 @@ const CreateTestimonial = () => {
             rows={8}
             className="w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none focus:border-gray-300"
           />
-          {errors.content && (
-            <p className="mt-1 text-xs text-red-600">{errors.content.message}</p>
-          )}
+          {errors.content && <p className="mt-1 text-xs text-red-600">{errors.content.message}</p>}
         </div>
 
         {/* Rating / Featured */}
@@ -256,9 +307,7 @@ const CreateTestimonial = () => {
                 </div>
               )}
             />
-            {errors.rating && (
-              <p className="mt-1 text-xs text-red-600">{errors.rating.message}</p>
-            )}
+            {errors.rating && <p className="mt-1 text-xs text-red-600">{errors.rating.message}</p>}
           </div>
 
           {/* Featured */}
@@ -279,7 +328,6 @@ const CreateTestimonial = () => {
               )}
             />
             <p className="mt-2 text-xs font-medium text-gray-800">
-              {" "}
               If you choose <strong>featured</strong>, this testimonial will appear on the landing
               of homepage
             </p>
@@ -293,4 +341,4 @@ const CreateTestimonial = () => {
   );
 };
 
-export default CreateTestimonial;
+export default EditTestimonial;

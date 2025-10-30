@@ -5,6 +5,8 @@ import axios from "axios";
 import dataProviderSimpleRest from "@refinedev/simple-rest";
 import type { DataProvider } from "@refinedev/core";
 import { createBlogDataProvider } from "./blog";
+import { createGalleryDataProvider } from "./gallery";
+import { createTestimonialDataProvider } from "./testimonial";
 
 const API_URL: string | undefined = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -25,13 +27,14 @@ const base = dataProviderSimpleRest(API_URL ?? "", axiosInstance);
 
 // Initialize blog data provider
 const blogDataProvider = createBlogDataProvider(axiosInstance);
+const galleryDataProvider = createGalleryDataProvider(axiosInstance);
+const testimonialDataProvider = createTestimonialDataProvider(axiosInstance);
 
 // Resources that need custom handling
 const CUSTOM_RESOURCES: Record<string, any> = {
   blog: blogDataProvider,
-  // Add more custom providers here as needed
-  // gallery: galleryDataProvider,
-  // testimonials: testimonialsDataProvider,
+  gallery: galleryDataProvider,
+  testimonial: testimonialDataProvider,
 };
 
 // Main data provider with resource-specific handling
