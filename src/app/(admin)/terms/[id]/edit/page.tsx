@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useList, useCreate } from "@refinedev/core";
+import { useRouter, useParams } from "next/navigation";
+import { useShow, useList, useUpdate } from "@refinedev/core";
 import TinyMCEEditor from "@/components/TinyMCEEditor";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,18 +19,40 @@ type User = {
   isActive: boolean;
 };
 
-const CreateTerms = () => {
+const EditTerms = () => {
   const router = useRouter();
-    const { mutate: createTerm, isLoading } = useCreate({
-      resource: "term",
-    });
+  const params = useParams();
+  const termId = params?.id as string;
 
+  // ✅ Fetch term details
+  const { queryResult } = useShow({
+    resource: "term",
+    id: termId,
+  });
+
+  const { data, isLoading: isTermLoading, isError } = queryResult;
+  const term = data?.data;
+
+  // ✅ Fetch active users
+  const { data: usersData, isLoading: usersLoading } = useList<User>({
+    resource: "user",
+    pagination: { pageSize: 100 },
+    filters: [{ field: "isActive", operator: "eq", value: true }],
+  });
+
+  const users = Array.isArray(usersData?.data) ? usersData.data : [];
+
+  // ✅ Update mutation
+  const { mutate: updateTerm, isLoading: isUpdating } = useUpdate();
+
+  // ✅ Form setup
   const {
     register,
     control,
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<TermForm>({
     resolver: zodResolver(TermSchema),
@@ -41,37 +63,64 @@ const CreateTerms = () => {
     },
   });
 
-  // ✅ Fetch users
-  const { data: usersData, isLoading: usersLoading } = useList<User>({
-    resource: "user",
-    pagination: { pageSize: 100 },
-    filters: [{ field: "isActive", operator: "eq", value: true }],
-  });
+  // ✅ Prefill form once term data is fetched
+  useEffect(() => {
+    if (term) {
+      reset({
+        title: term.title || "",
+        content: term.content || "",
+        author: term.author?.user_id || term.author || "",
+      });
+    }
+  }, [term, reset]);
 
-  const users = Array.isArray(usersData?.data) ? usersData.data : [];
   const content = watch("content");
 
+  // ✅ Submit updated data
   const onSubmit = async (status: "Draft" | "Published") => {
-  await handleSubmit(async (values) => {
-    try {
-      const formData = { ...values, status };
+    await handleSubmit(async (values) => {
+      try {
+        const formData = { ...values, status };
 
-      await createTerm({
-        resource: "term",
-        values: formData,
-      });
+        await updateTerm({
+          resource: "term",
+          id: termId,
+          values: formData,
+        });
 
-      toast.success(
-        status === "Draft" 
-          ? "Terms & Conditions saved as draft successfully!" 
-          : "Terms & Conditions published successfully!"
-      );
-      router.push("/terms");
-    } catch (err) {
-      toast.error("Failed to create Terms & Conditions. Please try again.");
-    }
-  })();
-};
+        toast.success(
+          status === "Draft"
+            ? "Terms updated and saved as draft!"
+            : "Terms updated and published successfully!"
+        );
+        router.push("/terms");
+      } catch (err) {
+        toast.error("Failed to update Terms & Conditions. Please try again.");
+      }
+    })();
+  };
+
+  if (isTermLoading) {
+    return (
+      <div className="flex h-[70vh] items-center justify-center text-gray-500">
+        Loading term details...
+      </div>
+    );
+  }
+
+  if (isError || !term) {
+    return (
+      <div className="flex h-[70vh] flex-col items-center justify-center text-gray-600">
+        <p className="text-sm">Term not found or failed to load.</p>
+        <button
+          onClick={() => router.back()}
+          className="mt-4 text-sm text-[#CE9F41] hover:underline"
+        >
+          ← Go Back
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -86,13 +135,13 @@ const CreateTerms = () => {
         </button>
 
         <h1 className="text-xl sm:text-2xl font-medium text-gray-900">
-          Add New Terms & Conditions
+          Edit Terms & Conditions
         </h1>
 
         <div className="flex items-center gap-3">
           <button
             type="button"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUpdating}
             onClick={() => onSubmit("Draft")}
             className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
           >
@@ -100,11 +149,11 @@ const CreateTerms = () => {
           </button>
           <button
             type="button"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUpdating}
             onClick={() => onSubmit("Published")}
             className="rounded-xl bg-[#CE9F41] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-60"
           >
-            Publish
+            Update & Publish
           </button>
         </div>
       </div>
@@ -127,7 +176,7 @@ const CreateTerms = () => {
           )}
         </div>
 
-        {/* Content - TinyMCE */}
+        {/* Content */}
         <div className="mb-5">
           <label className="mb-2 text-sm font-semibold text-gray-800 flex gap-2">
             Content <span className="text-red-500">*</span>
@@ -137,16 +186,17 @@ const CreateTerms = () => {
               </Link>
             )}
           </label>
-
           <Controller
             control={control}
             name="content"
             render={({ field }) => (
               <TinyMCEEditor
                 value={field.value}
-                onChange={(value) => setValue("content", value, { shouldValidate: true })}
+                onChange={(value) =>
+                  setValue("content", value, { shouldValidate: true })
+                }
                 height={500}
-                placeholder="Enter terms and conditions content..."
+                placeholder="Edit terms and conditions content..."
               />
             )}
           />
@@ -177,9 +227,6 @@ const CreateTerms = () => {
           {errors.author && (
             <p className="mt-1 text-xs text-red-500">{errors.author.message}</p>
           )}
-          {!usersLoading && users.length === 0 && (
-            <p className="mt-1 text-xs text-red-500">No active users found</p>
-          )}
         </div>
 
         {/* Preview */}
@@ -199,4 +246,4 @@ const CreateTerms = () => {
   );
 };
 
-export default CreateTerms;
+export default EditTerms;

@@ -137,7 +137,7 @@ export const authProvider: AuthProvider = {
       const payload = JSON.parse(atob(token.split('.')[1]));
       return { id: payload.user_id, name: "Admin" };
     } catch {
-      return { id: 1, name: "Admin" };
+      throw new Error("Failed to decode token");
     }
   },
 

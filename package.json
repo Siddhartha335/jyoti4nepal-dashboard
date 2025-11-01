@@ -21,6 +21,8 @@
     "@refinedev/kbar": "^1.3.17",
     "@refinedev/nextjs-router": "^6.2.3",
     "@refinedev/simple-rest": "^5.0.11",
+    "@tinymce/tinymce-react": "^6.3.0",
+    "@types/tinymce": "^5.5.0",
     "axios": "^1.11.0",
     "lucide-react": "^0.545.0",
     "next": "^14.1.0",
@@ -28,6 +30,7 @@
     "react-dom": "^18.0.0",
     "react-hook-form": "^7.64.0",
     "react-hot-toast": "^2.5.2",
+    "tinymce": "^8.2.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
