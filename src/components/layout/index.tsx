@@ -16,6 +16,7 @@ import {
   Bell,
   User,
 } from "lucide-react";
+import { useGetIdentity } from "@refinedev/core";
 
 const NAV = [
   { label: "Management", href: "/dashboard", icon: LayoutDashboard },
@@ -25,16 +26,19 @@ const NAV = [
   { label: "Pop-up", href: "/popup", icon: Bell },
   { label: "FAQ", href: "/faq", icon: BookOpen },
   { label: "Terms & Condition", href: "/terms", icon: FileText },
-  { label: "Settings", href: "/settings", icon: User },
+  { label: "Settings", href: "/settings", icon: User, requiresSuperAdmin: true },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
+  const { data: user } = useGetIdentity<{ role?: string }>();
   const pathname = usePathname();
   const { mutate: logout } = useLogout();
   const [open, setOpen] = useState(false);
 
   const isActive = (href: string) =>
     pathname === href || pathname?.startsWith(href + "/");
+
+  const isSuperAdmin = user?.role === "SUPERADMIN";
 
   return (
     <div className="h-screen overflow-hidden bg-gray-100">
@@ -48,10 +52,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       >
         {/* Admin Panel Header */}
         <Link href={"/dashboard"}>
-            <div className="flex items-center gap-3 p-4">
-              <Image width={44} height={44} src="/dashboard-logo.svg" alt="jyoti" />
-              <span className="text-lg font-semibold text-gray-800">Admin Panel</span>
-            </div>
+          <div className="flex items-center gap-3 p-4">
+            <Image width={44} height={44} src="/dashboard-logo.svg" alt="jyoti" />
+            <span className="text-lg font-semibold text-gray-800">Admin Panel</span>
+          </div>
         </Link>
 
         {/* Sidebar nav */}
@@ -62,6 +66,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           <ul className="space-y-1">
             {NAV.map((item) => {
               const Icon = item.icon;
+              
+              // Hide settings completely for non-superadmin
+              if (item.requiresSuperAdmin && !isSuperAdmin) {
+                return null;
+              }
+              
               return (
                 <li key={item.href}>
                   <Link
