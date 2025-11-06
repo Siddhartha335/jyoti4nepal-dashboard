@@ -11,7 +11,7 @@ import { useForm, Controller } from "react-hook-form";
 import { TermSchema, type TermForm } from "@features/terms/term.schema";
 import toast from "react-hot-toast";
 
-type User = {
+export type User = {
   user_id: string;
   username: string | null;
   email: string;

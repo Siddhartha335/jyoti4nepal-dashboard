@@ -5,14 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Upload, Tag as TagIcon, X } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useOne, useUpdate } from "@refinedev/core";
+import { useOne, useUpdate, useList } from "@refinedev/core";
 import Image from "next/image";
+import toast from "react-hot-toast";
 
 import {
   BlogSchema,
   type BlogFormValues,
 } from "@/features/blogs/blog.schema";
-import toast from "react-hot-toast";
 
 type Blog = {
   blog_id: string;
@@ -20,6 +20,12 @@ type Blog = {
   description: string;
   content: string;
   status: "Published" | "Draft";
+  author: {
+    user_id: string;
+    username: string;
+    email: string;
+  };
+  readtime: number;
   tags: string[];
   cover_image: string;
   createdAt: string;
@@ -38,9 +44,16 @@ const EditBlogPage = () => {
   });
 
   const blog = data?.data;
-
   const [tagInput, setTagInput] = useState("");
   const [existingImage, setExistingImage] = useState<string | null>(null);
+
+  // ✅ Fetch active users for author select
+  const { data: usersData, isLoading: usersLoading } = useList({
+    resource: "user",
+    pagination: { pageSize: 100 },
+    filters: [{ field: "isActive", operator: "eq", value: true }],
+  });
+  const users = Array.isArray(usersData?.data) ? usersData.data : [];
 
   const {
     register,
@@ -56,6 +69,8 @@ const EditBlogPage = () => {
       title: "",
       description: "",
       content: "",
+      author: "",
+      readtime: 0,
       status: "Draft",
       tags: [],
       cover_image: undefined,
@@ -64,9 +79,8 @@ const EditBlogPage = () => {
   });
 
   const tags = watch("tags") || [];
-  const coverImage = watch("cover_image");
 
-  // Prefill form when blog data is loaded
+  // ✅ Prefill form when blog data is loaded
   useEffect(() => {
     if (blog) {
       reset({
@@ -74,8 +88,10 @@ const EditBlogPage = () => {
         description: blog.description,
         content: blog.content,
         status: blog.status,
-        tags: blog.tags,
-        cover_image: undefined, // Don't set file here
+        author: blog.author?.user_id ?? "",
+        readtime: blog.readtime ?? 0,
+        tags: blog.tags || [],
+        cover_image: undefined,
       });
       setExistingImage(blog.cover_image);
     }
@@ -96,55 +112,38 @@ const EditBlogPage = () => {
     );
   };
 
-  const submitWithStatus = (status: BlogFormValues["status"]) =>
+  // ✅ Submit handler
+  const submitWithStatus =
+    (status: BlogFormValues["status"]) =>
     handleSubmit(async (formData) => {
       try {
         const payload = { ...formData, status };
-        
         await mutateAsync({
           resource: "blog",
           id,
           values: payload,
         });
-        toast.success("Blog updated successfully");
-
+        toast.success("Blog updated successfully!");
         router.push("/blogs");
       } catch (error) {
         console.error("Error updating blog:", error);
-        toast.error("Failed to update blog. Please try again.");    
+        toast.error("Failed to update blog. Please try again.");
       }
     });
 
-  if (isLoading) {
+  if (isLoading)
     return (
-      <div className="mt-2">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#CE9F41] border-r-transparent"></div>
-            <p className="mt-4 text-sm text-gray-600">Loading blog...</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-sm text-gray-600">Loading blog...</p>
       </div>
     );
-  }
 
-  if (!blog) {
+  if (!blog)
     return (
-      <div className="mt-2">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <p className="text-lg font-medium text-red-600">Blog not found</p>
-            <button
-              onClick={() => router.back()}
-              className="mt-4 text-sm text-[#7B5B12] underline underline-offset-2"
-            >
-              Go back
-            </button>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-sm text-red-600">Blog not found</p>
       </div>
     );
-  }
 
   return (
     <div className="mt-2">
@@ -180,15 +179,13 @@ const EditBlogPage = () => {
 
       {/* Layout */}
       <form className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left */}
+        {/* Left side */}
         <div className="lg:col-span-8 space-y-5">
+          {/* Title */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-[#65421E] font-solomon">
-              Title
-            </label>
+            <label className="mb-2 block text-sm font-semibold text-[#65421E]">Title</label>
             <input
               {...register("title")}
-              placeholder="Enter blog post title"
               className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-gray-300"
             />
             {errors.title && (
@@ -196,13 +193,11 @@ const EditBlogPage = () => {
             )}
           </div>
 
+          {/* Description */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-[#65421E] font-solomon">
-              Description
-            </label>
+            <label className="mb-2 block text-sm font-semibold text-[#65421E]">Description</label>
             <input
               {...register("description")}
-              placeholder="Description of blog post"
               className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-gray-300"
             />
             {errors.description && (
@@ -210,13 +205,11 @@ const EditBlogPage = () => {
             )}
           </div>
 
+          {/* Content */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-[#65421E] font-solomon">
-              Content
-            </label>
+            <label className="mb-2 block text-sm font-semibold text-[#65421E]">Content</label>
             <textarea
               {...register("content")}
-              placeholder="Write your blog post content here"
               rows={14}
               className="w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none focus:border-gray-300"
             />
@@ -226,9 +219,9 @@ const EditBlogPage = () => {
           </div>
         </div>
 
-        {/* Right */}
+        {/* Right side */}
         <div className="lg:col-span-4 space-y-5">
-          {/* Cover Image */}
+          {/* Cover image */}
           <div className="rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-4">
             <h3 className="mb-3 text-sm font-semibold text-gray-800">Cover Image</h3>
 
@@ -236,10 +229,9 @@ const EditBlogPage = () => {
               name="cover_image"
               control={control}
               render={({ field: { onChange, value } }) => {
-                const [preview, setPreview] = React.useState<string | null>(null);
+                const [preview, setPreview] = useState<string | null>(null);
 
-                // Update preview when file changes
-                React.useEffect(() => {
+                useEffect(() => {
                   if (value instanceof File) {
                     const url = URL.createObjectURL(value);
                     setPreview(url);
@@ -251,42 +243,30 @@ const EditBlogPage = () => {
                 const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
                   const file = e.target.files?.[0] ?? null;
                   onChange(file);
-                  if (file) {
-                    setExistingImage(null); // Clear existing image when new file selected
-                  }
+                  if (file) setExistingImage(null);
                 };
 
-                // Show preview if new file selected, otherwise show existing image
-                const imageToShow = preview || (existingImage ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${existingImage}` : null);
+                const imageToShow =
+                  preview ||
+                  (existingImage ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${existingImage}` : null);
 
                 return (
                   <>
                     <div className="rounded-xl border-2 border-dashed border-gray-300 bg-white p-4 text-center">
                       {imageToShow ? (
-                        <div className="mb-3 relative">
-                          <div className="relative h-40 w-full max-w-xs mx-auto rounded-lg overflow-hidden">
-                            <Image
-                              src={imageToShow}
-                              alt="Cover preview"
-                              fill
-                              className="object-cover"
-                              decoding="async"
-                            />
-                          </div>
-                          {existingImage && !preview && (
-                            <p className="mt-2 text-xs text-gray-500">Current image</p>
-                          )}
-                          {preview && (
-                            <p className="mt-2 text-xs text-green-600">New image selected</p>
-                          )}
-                        </div>
+                        <Image
+                          src={imageToShow}
+                          alt="Cover preview"
+                          width={300}
+                          height={160}
+                          className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover"
+                        />
                       ) : (
                         <div className="mb-3 flex flex-col items-center justify-center gap-2 text-gray-500">
                           <Upload className="h-6 w-6" />
                           <p className="text-sm">Click to upload or drag and drop</p>
                         </div>
                       )}
-
                       <input
                         id="cover"
                         type="file"
@@ -294,7 +274,6 @@ const EditBlogPage = () => {
                         className="hidden"
                         onChange={handleFile}
                       />
-
                       <label
                         htmlFor="cover"
                         className="inline-block cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -314,10 +293,11 @@ const EditBlogPage = () => {
             />
           </div>
 
-          {/* Tags */}
+          {/* Tags, Author, and Readtime */}
           <div className="rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-4">
             <h3 className="mb-3 text-sm font-semibold text-gray-800">Tags</h3>
 
+            {/* Tags */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <input
@@ -332,23 +312,18 @@ const EditBlogPage = () => {
                   placeholder="Add tags"
                   className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 pl-9 text-sm outline-none focus:border-gray-300"
                 />
-                <TagIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <TagIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               </div>
               <button
                 type="button"
                 onClick={addTag}
                 className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-50"
-                title="Add tag"
               >
                 Add
               </button>
             </div>
 
-            {errors.tags && (
-              <p className="mt-2 text-xs text-red-600">{errors.tags.message as string}</p>
-            )}
-
-            {(tags as string[]).length > 0 && (
+            {tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {tags.map((t) => (
                   <span
@@ -358,9 +333,8 @@ const EditBlogPage = () => {
                     {t}
                     <button
                       type="button"
-                      className="ml-1 rounded-full p-0.5 hover:bg-gray-100"
                       onClick={() => removeTag(t)}
-                      aria-label={`Remove ${t}`}
+                      className="ml-1 rounded-full p-0.5 hover:bg-gray-100"
                     >
                       <X className="h-3 w-3 text-gray-500" />
                     </button>
@@ -368,6 +342,47 @@ const EditBlogPage = () => {
                 ))}
               </div>
             )}
+
+            {/* Author */}
+            <div className="mt-5">
+              <label className="mb-2 block text-sm font-semibold text-gray-800">
+                Author
+              </label>
+              <select
+                {...register("author")}
+                disabled={usersLoading}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-gray-300"
+              >
+                <option value="">
+                  {usersLoading ? "Loading users..." : "Select author..."}
+                </option>
+                {users.map((user: any) => (
+                  <option key={user.user_id} value={user.user_id}>
+                    {user.username || user.email}
+                  </option>
+                ))}
+              </select>
+              {errors.author && (
+                <p className="mt-1 text-xs text-red-500">{errors.author.message}</p>
+              )}
+            </div>
+
+            {/* Readtime */}
+            <div className="mt-5">
+              <label className="mb-2 block text-sm font-semibold text-gray-800">
+                Read Time (minutes)
+              </label>
+              <input
+                type="number"
+                {...register("readtime", { valueAsNumber: true })}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-gray-300"
+              />
+              {errors.readtime && (
+                <p className="mt-1 text-xs text-red-600">
+                  {errors.readtime.message}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </form>

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, MessageSquare, Image, Megaphone } from "lucide-react";
+import { FileText, MessageSquare, Image, ShoppingCart, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useList } from "@refinedev/core";
 import { useMemo } from "react";
@@ -9,7 +9,7 @@ import { formatTimeAgo } from "@utils/formatTime";
 type ActivityItem = {
   text: string;
   time: string;
-  type: "blog" | "testimonial" | "gallery";
+  type: "blog" | "testimonial" | "gallery" | "product" | "faq";
   createdAt: string;
 };
 
@@ -27,6 +27,11 @@ export default function AdminHome() {
 
   const { data: galleryData, isLoading: galleryLoading } = useList({
     resource: "gallery",
+    pagination: { current: 1, pageSize: 1 },
+  });
+
+  const { data: productsData, isLoading: productLoading } = useList({
+    resource: "product",
     pagination: { current: 1, pageSize: 1 },
   });
 
@@ -49,10 +54,23 @@ export default function AdminHome() {
     sorters: [{ field: "createdAt", order: "desc" }],
   });
 
+  const { data: recentProducts } = useList({
+    resource: "product",
+    pagination: { current: 1, pageSize: 2 },
+    sorters: [{ field: "createdAt", order: "desc" }],
+  });
+
+  const { data: recentFAQs } = useList({
+    resource: "faq",
+    pagination: { current: 1, pageSize: 2 },
+    sorters: [{ field: "createdAt", order: "desc" }],
+  });
+
   // Get totals from the data
   const blogsCount = blogsData?.total ?? 0;
   const testimonialsCount = testimonialsData?.total ?? 0;
   const galleryCount = galleryData?.total ?? 0;
+  const productsCount = productsData?.total ?? 0;
 
   // Combine and sort recent activities - Take only top 5
   const recentActivity: ActivityItem[] = useMemo(() => {
@@ -88,6 +106,24 @@ export default function AdminHome() {
       });
     });
 
+    recentProducts?.data?.forEach((product: any) => {
+      activities.push({
+        text: `New product: "${product.name?.substring(0, 40)}${product.name?.length > 40 ? "..." : ""}"`,
+        time: formatTimeAgo(product.createdAt),
+        type: "product",
+        createdAt: product.createdAt,
+      });
+    });
+
+    recentFAQs?.data?.forEach((faq: any) => {
+      activities.push({
+        text: `New FAQ: "${faq.question?.substring(0, 40)}${faq.question?.length > 40 ? "..." : ""}"`,
+        time: formatTimeAgo(faq.createdAt),
+        type: "faq",
+        createdAt: faq.createdAt,
+      });
+    });
+
     // Sort by createdAt descending and take only top 5
     return activities
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -114,9 +150,9 @@ export default function AdminHome() {
       loading: galleryLoading,
     },
     {
-      label: "Active Pop-ups",
-      value: "0",
-      icon: Megaphone,
+      label: "Products",
+      value: productLoading ? "..." : productsCount.toString(),
+      icon: ShoppingCart,
       loading: false,
     },
   ];
@@ -125,7 +161,7 @@ export default function AdminHome() {
     { label: "Add Blogs", icon: FileText, link: "/blogs/create" },
     { label: "Add Testimonials", icon: MessageSquare, link: "/testimonials/create" },
     { label: "Upload Images", icon: Image, link: "/gallery/upload" },
-    { label: "Create Pop-up", icon: Megaphone, link: "/blogs/create" },
+    { label: "Add Products", icon: ShoppingCart, link: "/products/create" },
   ];
 
   // Get icon based on activity type
@@ -137,6 +173,11 @@ export default function AdminHome() {
         return <MessageSquare className="h-4 w-4 text-[#CE9F41]" />;
       case "gallery":
         return <Image className="h-4 w-4 text-[#CE9F41]" />;
+      case "product":
+        return <ShoppingCart className="h-4 w-4 text-[#CE9F41]" />;
+      case "faq":
+        return <BookOpen className="h-4 w-4 text-[#CE9F41]" />;
+      
     }
   };
 
@@ -144,7 +185,7 @@ export default function AdminHome() {
     <div className="space-y-6 -mt-10">
       {/* Header */}
       <div>
-        <h1 className="text-2xl mt-5 md:mt-12 text-[#000000]">Dashboard Overview</h1>
+        <h1 className="text-2xl mt-5 md:mt-12 font-semibold text-[#000000]">Dashboard Overview</h1>
         <h1 className="text-[#65421E] mt-1">Manage your website content and settings</h1>
       </div>
 

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
-export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg"] as const;
 
 export const BlogSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
@@ -17,10 +17,12 @@ export const BlogSchema = z.object({
     .custom<File | null>()
     .refine(
       (file) => !file || (file && ACCEPTED_IMAGE_TYPES.includes(file.type as typeof ACCEPTED_IMAGE_TYPES[number])),
-      "Only JPG, PNG, or WEBP images are allowed."
+      "Only JPG, PNG, SVG or WEBP images are allowed."
     )
     .refine((file) => !file || file.size <= MAX_IMAGE_SIZE, "Image must be under 2MB.")
     .optional(),
+  author: z.string().min(1, "Author is required."),
+  readtime: z.number().nonnegative("Read time must be a non-negative number.")
 });
 
 export type BlogFormValues = z.infer<typeof BlogSchema>;

@@ -114,48 +114,65 @@ const ListSettings = () => {
   };
 
 const handleAddUser = async (data: { username: string; email: string; password: string }) => {
-    registerUser(
-      {
-        username: data.username,
-        email: data.email,
-        password: data.password,
-        role: "ADMIN",
-      },
-      {
-        onSuccess: async () => {
-          try {
-            const emailResponse = await fetch("/api/send-credentials", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                username: data.username,
-                email: data.email,
-                password: data.password,
-              }),
-            });
+  try {
+    // Wrap registerUser in a Promise so we can await it properly
+    await new Promise<void>((resolve, reject) => {
+      registerUser(
+        {
+          username: data.username,
+          email: data.email,
+          password: data.password,
+          role: "ADMIN",
+        },
+        {
+          onSuccess: async () => {
+            try {
+              const emailResponse = await fetch("/api/send-credentials", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  username: data.username,
+                  email: data.email,
+                  password: data.password,
+                }),
+              });
 
-            if (!emailResponse.ok) {
-              console.error("Failed to send email");
-              toast.success("✅ User registered successfully, but email sending failed. They can login now.");
-              setIsModalOpen(false);
-              return;
+              if (!emailResponse.ok) {
+                console.error("Failed to send email");
+                toast.success(
+                  "✅ User registered successfully, but email sending failed. They can login now."
+                );
+              } else {
+                toast.success(
+                  "✅ User registered successfully! Credentials sent via email."
+                );
+              }
+
+              resolve(); 
+            } catch (error) {
+              console.error("Email error:", error);
+              toast.success(
+                "✅ User registered successfully, but email sending failed. They can login now."
+              );
+              resolve();
             }
+          },
+          onError: (error: any) => {
+            console.error("Registration error:", error);
+            toast.error(error.message || "❌ Failed to register user");
+            reject(error);
+          },
+        }
+      );
+    });
 
-            toast.success("✅ User registered successfully! Credentials sent via email. They can now login.");
-            setIsModalOpen(false);
-          } catch (error) {
-            console.error("Email error:", error);
-            toast.success("✅ User registered successfully, but email sending failed. They can login now.");
-            setIsModalOpen(false);
-          }
-        },
-        onError: (error: any) => {
-          console.error("Registration error:", error);
-          toast.error(error.message || "❌ Failed to register user");
-        },
-      }
-    );
-  };
+    // ✅ Close modal only after backend + email logic finish
+    setIsModalOpen(false);
+  } catch (error) {
+    console.error("Error in handleAddUser:", error);
+  }
+};
+
 
   // Loading state
   if (isLoadingSettings) {

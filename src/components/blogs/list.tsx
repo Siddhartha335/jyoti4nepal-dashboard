@@ -14,6 +14,9 @@ type BlogRow = {
   description: string;
   content: string;
   status: "Published" | "Draft";
+  author: {
+    username:string
+  }
   tags: string[];
   cover_image: string;
   createdAt: string;
@@ -276,7 +279,7 @@ const ListPage = () => {
                       ))}
                   </button>
                 </th>
-                <th className="px-4 py-3 font-medium w-[10%]">Tags</th>
+                <th className="px-4 py-3 font-medium w-[10%]">Author</th>
                 <th className="px-4 py-3 font-medium w-[10%]">Actions</th>
               </tr>
             </thead>
@@ -328,9 +331,7 @@ const ListPage = () => {
                       </td>
                       <td className="bg-white px-4 py-4 text-sm text-gray-700 shadow-sm">
                         <div className="line-clamp-1 text-xs">
-                          {blog.tags.length > 0
-                            ? blog.tags.slice(0, 2).join(", ") + (blog.tags.length > 2 ? "..." : "")
-                            : "—"}
+                          {blog.author.username}
                         </div>
                       </td>
                       <td className="rounded-r-xl bg-white px-4 py-4 text-sm shadow-sm">

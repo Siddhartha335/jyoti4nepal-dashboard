@@ -12,6 +12,9 @@ type Blog = {
   description: string;
   content: string;
   status: "Published" | "Draft";
+  author:{
+    username:string
+  }
   tags: string[];
   cover_image: string;
   createdAt: string;

@@ -5,19 +5,30 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Upload, Tag as TagIcon, X } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCreate } from "@refinedev/core";
+import { useCreate, useList } from "@refinedev/core";
+import toast from "react-hot-toast";
 
 import {
   BlogSchema,
   type BlogFormValues,
 } from "@/features/blogs/blog.schema";
-import toast from "react-hot-toast";
+
+import type { User } from "../terms/create"; 
 
 const CreateBlogPage = () => {
-  const { mutateAsync, isLoading } = useCreate<BlogFormValues>();
   const router = useRouter();
+  const { mutateAsync, isLoading } = useCreate<BlogFormValues>();
 
   const [tagInput, setTagInput] = useState("");
+
+  // ✅ Fetch active users for author field
+  const { data: usersData, isLoading: usersLoading } = useList<User>({
+    resource: "user",
+    pagination: { pageSize: 100 },
+    filters: [{ field: "isActive", operator: "eq", value: true }],
+  });
+
+  const users = Array.isArray(usersData?.data) ? usersData.data : [];
 
   const {
     register,
@@ -33,6 +44,8 @@ const CreateBlogPage = () => {
       description: "",
       content: "",
       status: "Draft",
+      readtime: 0,
+      author: "",
       tags: [],
       cover_image: undefined,
     },
@@ -41,6 +54,7 @@ const CreateBlogPage = () => {
 
   const tags = watch("tags") || [];
 
+  // ✅ Tag functions
   const addTag = () => {
     const t = tagInput.trim();
     if (!t) return;
@@ -56,16 +70,23 @@ const CreateBlogPage = () => {
     );
   };
 
-  const submitWithStatus = (status: BlogFormValues["status"]) =>
+  // ✅ Submit helper
+  const submitWithStatus =
+    (status: BlogFormValues["status"]) =>
     handleSubmit(async (formData) => {
       try {
         const payload = { ...formData, status };
-        
-        await mutateAsync({ 
+
+        await mutateAsync({
           resource: "blog",
-          values: payload 
+          values: payload,
         });
-        toast.success("Blog post created successfully!");
+
+        toast.success(
+          status === "Published"
+            ? "Blog post published successfully!"
+            : "Blog saved as draft."
+        );
         router.push("/blogs");
       } catch (error) {
         console.error("Error creating blog:", error);
@@ -111,8 +132,9 @@ const CreateBlogPage = () => {
       <form className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left */}
         <div className="lg:col-span-8 space-y-5">
+          {/* Title */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-[#65421E] font-solomon">
+            <label className="mb-2 block text-sm font-semibold text-[#65421E]">
               Title
             </label>
             <input
@@ -125,32 +147,38 @@ const CreateBlogPage = () => {
             )}
           </div>
 
+          {/* Description */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-[#65421E] font-solomon">
+            <label className="mb-2 block text-sm font-semibold text-[#65421E]">
               Description
             </label>
             <input
               {...register("description")}
-              placeholder="Description of blog post"
+              placeholder="Short blog description"
               className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-gray-300"
             />
             {errors.description && (
-              <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>
+              <p className="mt-1 text-xs text-red-600">
+                {errors.description.message}
+              </p>
             )}
           </div>
 
+          {/* Content */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-[#65421E] font-solomon">
+            <label className="mb-2 block text-sm font-semibold text-[#65421E]">
               Content
             </label>
             <textarea
               {...register("content")}
-              placeholder="Write your blog post content here"
+              placeholder="Write your blog post content here..."
               rows={14}
               className="w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none focus:border-gray-300"
             />
             {errors.content && (
-              <p className="mt-1 text-xs text-red-600">{errors.content.message}</p>
+              <p className="mt-1 text-xs text-red-600">
+                {errors.content.message}
+              </p>
             )}
           </div>
         </div>
@@ -159,7 +187,9 @@ const CreateBlogPage = () => {
         <div className="lg:col-span-4 space-y-5">
           {/* Cover Image */}
           <div className="rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-4">
-            <h3 className="mb-3 text-sm font-semibold text-gray-800">Cover Image</h3>
+            <h3 className="mb-3 text-sm font-semibold text-gray-800">
+              Cover Image
+            </h3>
 
             <Controller
               name="cover_image"
@@ -167,7 +197,6 @@ const CreateBlogPage = () => {
               render={({ field: { onChange, value } }) => {
                 const [preview, setPreview] = React.useState<string | null>(null);
 
-                // Update preview only when file changes
                 React.useEffect(() => {
                   if (value instanceof File) {
                     const url = URL.createObjectURL(value);
@@ -186,15 +215,11 @@ const CreateBlogPage = () => {
                   <>
                     <div className="rounded-xl border-2 border-dashed border-gray-300 bg-white p-4 text-center">
                       {preview ? (
-                        <div className="mb-3">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={preview}
-                            alt="Cover preview"
-                            className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover"
-                            decoding="async"
-                          />
-                        </div>
+                        <img
+                          src={preview}
+                          alt="Cover preview"
+                          className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover mb-3"
+                        />
                       ) : (
                         <div className="mb-3 flex flex-col items-center justify-center gap-2 text-gray-500">
                           <Upload className="h-6 w-6" />
@@ -229,10 +254,10 @@ const CreateBlogPage = () => {
             />
           </div>
 
-          {/* Tags */}
+          {/* Tags, Author, and Read Time */}
           <div className="rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-4">
+            {/* Tags */}
             <h3 className="mb-3 text-sm font-semibold text-gray-800">Tags</h3>
-
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <input
@@ -253,17 +278,12 @@ const CreateBlogPage = () => {
                 type="button"
                 onClick={addTag}
                 className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-50"
-                title="Add tag"
               >
                 Add
               </button>
             </div>
 
-            {errors.tags && (
-              <p className="mt-2 text-xs text-red-600">{errors.tags.message as string}</p>
-            )}
-
-            {(tags as string[]).length > 0 && (
+            {tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {tags.map((t) => (
                   <span
@@ -273,8 +293,8 @@ const CreateBlogPage = () => {
                     {t}
                     <button
                       type="button"
-                      className="ml-1 rounded-full p-0.5 hover:bg-gray-100"
                       onClick={() => removeTag(t)}
+                      className="ml-1 rounded-full p-0.5 hover:bg-gray-100"
                       aria-label={`Remove ${t}`}
                     >
                       <X className="h-3 w-3 text-gray-500" />
@@ -283,6 +303,56 @@ const CreateBlogPage = () => {
                 ))}
               </div>
             )}
+
+            {/* Author */}
+            <div className="mt-5">
+              <label className="mb-2 block text-sm font-semibold text-gray-800">
+                Author
+              </label>
+              <select
+                {...register("author")}
+                disabled={usersLoading}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-gray-300"
+              >
+                <option value="">
+                  {usersLoading ? "Loading users..." : "Select author..."}
+                </option>
+                {users.map((user) => (
+                  <option key={user.user_id} value={user.user_id}>
+                    {user.username || user.email}
+                  </option>
+                ))}
+              </select>
+              {errors.author && (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.author.message}
+                </p>
+              )}
+              {!usersLoading && users.length === 0 && (
+                <p className="mt-1 text-xs text-red-500">
+                  No active users found
+                </p>
+              )}
+            </div>
+
+            {/* Read Time */}
+            <div className="mt-5">
+              <label className="mb-2 block text-sm font-semibold text-gray-800">
+                Read Time (minutes)
+              </label>
+              <input
+                type="number"
+                {...register("readtime", { valueAsNumber: true })}
+                placeholder="e.g. 5"
+                min={0}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-gray-300"
+              />
+              {errors.readtime && (
+                <p className="mt-1 text-xs text-red-600">
+                  {errors.readtime.message}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </form>
