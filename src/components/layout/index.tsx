@@ -19,6 +19,8 @@ import {
   Users
 } from "lucide-react";
 import { useGetIdentity } from "@refinedev/core";
+import ChangePasswordModal from "@components/ChangePasswordModal";
+import toast from "react-hot-toast";
 
 const NAV = [
   { label: "Management", href: "/dashboard", icon: LayoutDashboard },
@@ -40,6 +42,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const { mutate: logout } = useLogout();
   const [open, setOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   const isActive = (href: string) =>
     pathname === href || pathname?.startsWith(href + "/");
@@ -69,6 +72,34 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
+const handleChangePassword = async (data: { currentPassword: string; newPassword: string }) => {
+  try {
+    const token = localStorage.getItem("token");
+    
+    const response = await fetch("/api/change-password", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        oldPassword: data.currentPassword,
+        password: data.newPassword,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to change password");
+    }
+
+    toast.success("Password changed successfully!");
+  } catch (error: any) {
+    console.error("Error changing password:", error);
+    toast.error(error.message || "Failed to change password. Please try again.");
+  }
+};
 
   return (
     <div className="h-screen overflow-hidden bg-gray-100">
@@ -181,9 +212,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 <button
                   onClick={() => {
                     setUserOpen(false);
-                    alert("Change Password clicked");
+                    setIsChangePasswordOpen(true);
                   }}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-t-xl"
                 >
                   Change Password
                 </button>
@@ -193,7 +224,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     setUserOpen(false);
                     logout();
                   }}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-b-xl"
                 >
                   Logout
                 </button>
@@ -202,12 +233,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
-
         {/* Scrollable main area only */}
         <main className="pt-20 h-[calc(100vh)] overflow-y-auto p-6">
           {children}
         </main>
       </div>
+
+      {/* Change Password Modal - Render outside the dropdown */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+        onSubmit={handleChangePassword}
+      />
 
       {/* Mobile header spacer to prevent overlap when sidebar is open (optional) */}
       <style jsx global>{`
