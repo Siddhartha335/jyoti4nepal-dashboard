@@ -15,7 +15,8 @@ import {
   Menu,
   Bell,
   User,
-  ShoppingCart
+  ShoppingCart,
+  Users
 } from "lucide-react";
 import { useGetIdentity } from "@refinedev/core";
 
@@ -27,6 +28,7 @@ const NAV = [
   { label: "Gallery", href: "/gallery", icon: Building2 },
   // { label: "Pop-up", href: "/popup", icon: Bell },
   { label: "FAQ", href: "/faq", icon: BookOpen },
+  { label: "Teams", href: "/teams", icon: Users },
   { label: "Terms & Condition", href: "/terms", icon: FileText },
   { label: "Settings", href: "/settings", icon: User, requiresSuperAdmin: true },
 ];

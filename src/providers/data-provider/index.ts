@@ -12,6 +12,7 @@ import { createUserDataProvider } from "./user";
 import { createTermDataProvider } from "./term";
 import { createSettingDataProvider } from "./setting";
 import { createProductDataProvider } from "./product";
+import { createTeamDataProvider } from "./team";
 
 const API_URL: string | undefined = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -39,6 +40,7 @@ const userDataProvider = createUserDataProvider(axiosInstance);
 const termDataProvider = createTermDataProvider(axiosInstance);
 const settingDataProvider = createSettingDataProvider(axiosInstance);
 const productDataProvider = createProductDataProvider(axiosInstance);
+const teamDataProvider = createTeamDataProvider(axiosInstance);
 
 
 // Resources that need custom handling
@@ -50,7 +52,8 @@ const CUSTOM_RESOURCES: Record<string, any> = {
   user: userDataProvider,
   term: termDataProvider,
   setting: settingDataProvider,
-  product:productDataProvider
+  product:productDataProvider,
+  team:teamDataProvider
 };
 
 // Main data provider with resource-specific handling
