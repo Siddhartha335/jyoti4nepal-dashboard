@@ -16,7 +16,8 @@ import {
   Bell,
   User,
   ShoppingCart,
-  Users
+  Users,
+  PhoneCall
 } from "lucide-react";
 import { useGetIdentity } from "@refinedev/core";
 import ChangePasswordModal from "@components/ChangePasswordModal";
@@ -26,6 +27,7 @@ const NAV = [
   { label: "Management", href: "/dashboard", icon: LayoutDashboard },
   { label: "Products", href: "/products", icon: ShoppingCart },
   { label: "Blogs", href: "/blogs", icon: Newspaper },
+  { label: "Customer Inquiry", href: "/contacts", icon: PhoneCall },
   { label: "Testimonials", href: "/testimonials", icon: FileText },
   { label: "Gallery", href: "/gallery", icon: Building2 },
   // { label: "Pop-up", href: "/popup", icon: Bell },

@@ -9,6 +9,7 @@ import {  useUpdate, useOne, useRegister } from "@refinedev/core";
 import toast from "react-hot-toast";
 import AddUserModal from "@components/AddUserModal";
 import { useGetIdentity, useList } from "@refinedev/core";
+import NewsletterSubscribers from "@components/NewsletterSubscribers";
 
 interface IUser {
   role: string;
@@ -220,8 +221,8 @@ const handleAddUser = async (data: { username: string; email: string; password: 
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-4 max-w-[11rem] bg-[#FAF7EC] rounded-lg p-[10px]">
-        {["General", "Users"].map((tab) => (
+      <div className="mb-6 flex gap-4 max-w-[18rem] bg-[#FAF7EC] rounded-lg p-[10px]">
+        {["General", "Users", "Newsletter Subscribers"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -502,6 +503,21 @@ const handleAddUser = async (data: { username: string; email: string; password: 
             onClose={() => setIsModalOpen(false)}
             onSubmit={handleAddUser}
           />
+        </div>
+      )}
+
+      {activeTab === "Newsletter Subscribers" && (
+        <div className="bg-[#F7F6F3] p-5 border-[1px] border-[#E1DED1] rounded-lg">
+          <div className="flex justify-between items-center mb-5">
+            <div>
+              <h2 className="text-xl font-medium text-gray-800">Newsletter Subscribers</h2>
+              <p className="text-sm text-[#65421E]">
+                Manage your newsletter email subscribers
+              </p>
+            </div>
+          </div>
+
+          <NewsletterSubscribers />
         </div>
       )}
     </div>
