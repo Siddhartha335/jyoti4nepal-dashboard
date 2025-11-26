@@ -163,8 +163,7 @@ const ViewBlogPage = () => {
 
           {/* Content */}
           <div className="prose prose-gray max-w-none">
-            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {blog.content}
+            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: blog.content }}>              
             </div>
           </div>
 

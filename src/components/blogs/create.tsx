@@ -7,6 +7,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCreate, useList } from "@refinedev/core";
 import toast from "react-hot-toast";
+import TinyMCEEditorComponent from "@components/TinyMCEEditor";
 
 import {
   BlogSchema,
@@ -20,6 +21,7 @@ const CreateBlogPage = () => {
   const { mutateAsync, isLoading } = useCreate<BlogFormValues>();
 
   const [tagInput, setTagInput] = useState("");
+
 
   // ✅ Fetch active users for author field
   const { data: usersData, isLoading: usersLoading } = useList<User>({
@@ -53,6 +55,7 @@ const CreateBlogPage = () => {
   });
 
   const tags = watch("tags") || [];
+  const contentValue = watch("content") || "";
 
   // ✅ Tag functions
   const addTag = () => {
@@ -164,23 +167,53 @@ const CreateBlogPage = () => {
             )}
           </div>
 
-          {/* Content */}
+          {/* Content (TinyMCE) */}
           <div>
             <label className="mb-2 block text-sm font-semibold text-[#65421E]">
               Content
             </label>
-            <textarea
-              {...register("content")}
-              placeholder="Write your blog post content here..."
-              rows={14}
-              className="w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none focus:border-gray-300"
+
+            <Controller
+              name="content"
+              control={control}
+              render={({ field }) => (
+                <TinyMCEEditorComponent
+                  value={field.value}
+                  onChange={(content) => field.onChange(content)}
+                  height={450}
+                  placeholder="Write your blog post content here..."
+                />
+              )}
             />
+
             {errors.content && (
               <p className="mt-1 text-xs text-red-600">
                 {errors.content.message}
               </p>
             )}
           </div>
+
+
+          {/* Content Preview */}
+          <div className="mt-6">
+            <h2 className="text-sm font-semibold text-[#65421E] mb-3">
+              Live Preview
+            </h2>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4 prose max-w-none">
+              {contentValue.trim() ? (
+                <div
+                  dangerouslySetInnerHTML={{ __html: contentValue }}
+                />
+              ) : (
+                <p className="text-gray-400 text-sm italic">
+                  Content preview will appear here...
+                </p>
+              )}
+            </div>
+          </div>
+
+
         </div>
 
         {/* Right */}

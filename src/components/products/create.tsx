@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ArrowLeft, Upload, Tag as TagIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
@@ -15,9 +15,36 @@ import {
 
 const CreateProduct = () => {
   const router = useRouter();
-  const {mutateAsync, isLoading} = useCreate<Product>();
+  const { mutateAsync, isLoading } = useCreate<Product>();
+
   const [tagInput, setTagInput] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+
+  // Category system
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [useExistingCategory, setUseExistingCategory] = useState(true);
+
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true);
+        const res = await fetch(
+          "http://localhost:8000/api/v1/product/all-categories"
+        );
+        const json = await res.json();
+        const names = json.data?.map((c: any) => c.category) || [];
+        setCategories(names);
+      } catch (err) {
+        console.error("Failed to load categories", err);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const {
     register,
@@ -40,6 +67,7 @@ const CreateProduct = () => {
 
   const tags = watch("tags") || [];
 
+  // Tag functions
   const addTag = () => {
     if (!tagInput.trim()) return;
     if (!tags.includes(tagInput)) {
@@ -55,6 +83,7 @@ const CreateProduct = () => {
     );
   };
 
+  // Submit logic
   const submitWithStatus =
     (status: Product["status"]) =>
     handleSubmit(async (data) => {
@@ -73,7 +102,7 @@ const CreateProduct = () => {
         );
         router.push("/products");
       } catch (error) {
-        console.error("Error creating Product:", error);
+        console.error("Error creating product:", error);
         toast.error("Failed to create product. Please try again.");
       }
     });
@@ -160,14 +189,70 @@ const CreateProduct = () => {
 
           {/* Category */}
           <div className="rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-5">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
               Category
             </label>
-            <input
-                  {...register("category")}
-                  placeholder="Enter the category"
-                  className="w-full rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm outline-none focus:border-[#CE9F41]"
-                />
+
+            {/* Toggle Buttons */}
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setUseExistingCategory(true);
+                  setValue("category", "");
+                }}
+                className={`px-3 py-2 text-sm rounded-lg border ${
+                  useExistingCategory
+                    ? "border-[#CE9F41] text-[#CE9F41]"
+                    : "border-gray-300 text-gray-600"
+                }`}
+              >
+                Choose Existing
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setUseExistingCategory(false);
+                  setValue("category", "");
+                }}
+                className={`px-3 py-2 text-sm rounded-lg border ${
+                  !useExistingCategory
+                    ? "border-[#CE9F41] text-[#CE9F41]"
+                    : "border-gray-300 text-gray-600"
+                }`}
+              >
+                Create New
+              </button>
+            </div>
+
+            {/* Existing Category Dropdown */}
+            {useExistingCategory ? (
+              <select
+                {...register("category")}
+                disabled={isLoadingCategories}
+                className="w-full rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm outline-none"
+              >
+                <option value="">
+                  {isLoadingCategories
+                    ? "Loading categories..."
+                    : "Select a category"}
+                </option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              // Create New Category Input
+              <input
+                {...register("category")}
+                placeholder="Enter new category"
+                className="w-full rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm outline-none focus:border-[#CE9F41]"
+              />
+            )}
+
             {errors.category && (
               <p className="mt-1 text-xs text-red-600">
                 {errors.category.message}

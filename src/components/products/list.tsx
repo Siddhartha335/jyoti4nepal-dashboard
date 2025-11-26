@@ -280,7 +280,7 @@ const ListProducts = () => {
                     </td>
 
                     {/* Image */}
-                    <td className="rounded-l-xl bg-white px-5 py-3 text-sm shadow-sm">
+                    <td className="bg-white px-5 py-3 text-sm shadow-sm">
                       {p.image ? (
                         <img
                           src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${p.image}`}
