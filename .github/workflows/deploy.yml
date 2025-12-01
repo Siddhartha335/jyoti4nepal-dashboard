@@ -3,7 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches: [main]
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -21,7 +21,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
-            set -e  # Exit immediately if any command fails
+            set -e
+            export PATH="$HOME/.bun/bin:$PATH"
             
             cd ${{ secrets.DEPLOY_PATH }} || exit 1
             
@@ -29,7 +30,7 @@ jobs:
             git pull origin main || exit 1
             
             echo "📥 Installing dependencies..."
-            bun install --frozen-lockfile || exit 1
+            bun install || exit 1
             
             echo "🔨 Building project..."
             bun run build || exit 1
