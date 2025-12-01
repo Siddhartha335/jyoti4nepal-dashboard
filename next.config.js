@@ -15,6 +15,11 @@ const nextConfig = {
         hostname: 'jyoti4nepal-backend.vercel.app',
         pathname: '/uploads/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'api.jyotinepal.com',
+        pathname: '/uploads/**',
+      },
     ],
   },
 };

@@ -1,18 +1,9 @@
-"use client";
+import MainPage from "@components/MainPage"
 
-import { useIsAuthenticated } from "@refinedev/core";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-export default function Home() {
-  const { data, isLoading } = useIsAuthenticated();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (isLoading) return;
-    if (data?.authenticated) router.replace("/dashboard");
-    else router.replace("/login");
-  }, [data, isLoading, router]);
-
-  return null; // nothing to render while redirecting
+const page = () => {
+  return (
+    <MainPage />
+  )
 }
+
+export default page

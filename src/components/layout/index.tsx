@@ -30,7 +30,7 @@ const NAV = [
   { label: "Customer Inquiry", href: "/contacts", icon: PhoneCall },
   { label: "Testimonials", href: "/testimonials", icon: FileText },
   { label: "Gallery", href: "/gallery", icon: Building2 },
-  // { label: "Pop-up", href: "/popup", icon: Bell },
+  { label: "Pop-up", href: "/popup", icon: Bell },
   { label: "FAQ", href: "/faq", icon: BookOpen },
   { label: "Teams", href: "/teams", icon: Users },
   { label: "Terms & Condition", href: "/terms", icon: FileText },
@@ -108,14 +108,14 @@ const handleChangePassword = async (data: { currentPassword: string; newPassword
       {/* Fixed sidebar */}
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-30 w-64 bg-[#F7F6F3] border-r shadow-sm font-solomon",
+          "fixed inset-y-0 left-0 z-30 w-64 bg-[#F7F6F3] border-r shadow-sm font-solomon flex flex-col",
           open ? "block" : "hidden",
-          "lg:block",
+          "lg:flex",
         ].join(" ")}
       >
-        {/* Admin Panel Header */}
+        {/* Fixed Admin Panel Header */}
         <Link href={"/dashboard"}>
-          <div className="flex items-center gap-3 p-4">
+          <div className="flex items-center gap-3 p-4 border-b">
             <Image width={44} height={44} src="/dashboard-logo.svg" alt="jyoti" />
             <span className="text-lg font-semibold text-gray-800">
               {isSuperAdmin ? "SuperAdmin Panel" : "Admin Panel"}
@@ -123,8 +123,8 @@ const handleChangePassword = async (data: { currentPassword: string; newPassword
           </div>
         </Link>
 
-        {/* Sidebar nav */}
-        <nav className="p-4">
+        {/* Scrollable Sidebar nav */}
+        <nav className="flex-1 overflow-y-auto p-4">
           <div className="mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
             Management
           </div>
@@ -158,8 +158,8 @@ const handleChangePassword = async (data: { currentPassword: string; newPassword
           </ul>
         </nav>
 
-        {/* Logout Button */}
-        <div className="absolute bottom-0 left-0 w-64 p-4 bg-[#F7F6F3]">
+        {/* Fixed Logout Button */}
+        <div className="p-4 border-t bg-[#F7F6F3]">
           <button
             onClick={() => logout()}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100"

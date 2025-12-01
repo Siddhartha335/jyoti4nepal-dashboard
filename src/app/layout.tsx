@@ -6,10 +6,13 @@ import { Toaster } from "react-hot-toast";
 import { AuthGuard } from "@providers/AuthGuard";
 
 export const metadata: Metadata = {
-  title: "Admin Dashboard",
-  description: "Created by Nymna Technology",
+  title: {
+    default: "JyotiNepal Admin Dashboard",
+    template: "%s | JyotiNepal Dashboard",
+  },
+  description: "Admin dashboard for managing JyotiNepal resources, users, and content.",
   icons: {
-    icon: "/logo1.svg",
+    icon: "/favicon/favicon.ico",
   },
 };
 

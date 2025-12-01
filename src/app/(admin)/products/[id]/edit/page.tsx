@@ -221,60 +221,81 @@ const EditProductPage = () => {
           {/* Image Upload */}
           <div className="rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-5">
             <h3 className="text-sm font-semibold text-gray-800 mb-4">Image</h3>
-            <Controller
-              name="image"
-              control={control}
-              render={({ field: { onChange, value } }) => {
-                useEffect(() => {
-                  if (value instanceof File) {
-                    const url = URL.createObjectURL(value);
-                    setPreview(url);
-                    return () => URL.revokeObjectURL(url);
-                  }
-                  setPreview(null);
-                }, [value]);
+              <Controller
+                name="image"
+                control={control}
+                render={({ field: { onChange, value }, fieldState: { error } }) => {
+                  useEffect(() => {
+                    if (value instanceof File) {
+                      const url = URL.createObjectURL(value);
+                      setPreview(url);
+                      return () => URL.revokeObjectURL(url);
+                    }
+                    setPreview(null);
+                  }, [value]);
 
-                const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    onChange(file);
-                    setExistingImage(null);
-                  }
-                };
+                  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                    const file = e.target.files?.[0];
 
-                const displayImage = preview || existingImage;
+                    if (file) {
+                      // --- Optional validation ----
+                      if (!file.type.startsWith("image/")) {
+                        toast.error("Only image files are allowed.");
+                        return;
+                      }
 
-                return (
-                  <div className="border-2 border-dashed border-[#E1DED1] bg-white rounded-xl p-4 text-center">
-                    {displayImage ? (
-                      <img
-                        src={displayImage}
-                        alt="Preview"
-                        className="mx-auto h-40 w-auto object-cover rounded-lg mb-3"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center text-gray-400 mb-3">
-                        <Upload className="h-6 w-6" />
-                        <p className="text-sm mt-2">Upload image</p>
+                      if (file.size > 2 * 1024 * 1024) {
+                        toast.error("Image size must be less than 2MB.");
+                        return;
+                      }
+
+                      onChange(file);
+                      setExistingImage(null);
+                    }
+                  };
+
+                  const displayImage = preview || existingImage;
+
+                  return (
+                    <div>
+                      <div className="border-2 border-dashed border-[#E1DED1] bg-white rounded-xl p-4 text-center">
+                        {displayImage ? (
+                          <img
+                            src={displayImage}
+                            alt="Preview"
+                            className="mx-auto h-40 w-auto object-cover rounded-lg mb-3"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center text-gray-400 mb-3">
+                            <Upload className="h-6 w-6" />
+                            <p className="text-sm mt-2">Upload image</p>
+                          </div>
+                        )}
+
+                        <label
+                          htmlFor="fileUpload"
+                          className="cursor-pointer inline-block rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          {displayImage ? "Change Image" : "Choose File"}
+                        </label>
+
+                        <input
+                          id="fileUpload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
                       </div>
-                    )}
-                    <label
-                      htmlFor="file"
-                      className="cursor-pointer inline-block rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      {displayImage ? "Change Image" : "Choose File"}
-                    </label>
-                    <input
-                      id="file"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
-                  </div>
-                );
-              }}
-            />
+
+                      {/* 🔴 ERROR MESSAGE BELOW IMAGE */}
+                      {error?.message && (
+                        <p className="text-xs text-red-600 mt-2">{error.message}</p>
+                      )}
+                    </div>
+                  );
+                }}
+              />
           </div>
 
           {/* Tags */}
