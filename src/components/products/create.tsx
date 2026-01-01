@@ -31,7 +31,7 @@ const CreateProduct = () => {
       try {
         setIsLoadingCategories(true);
         const res = await fetch(
-          "http://localhost:8000/api/v1/product/all-categories"
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/product/all-categories`
         );
         const json = await res.json();
         const names = json.data?.map((c: any) => c.category) || [];

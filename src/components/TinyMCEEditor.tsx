@@ -119,7 +119,7 @@ const TinyMCEEditorComponent: React.FC<TinyMCEEditorProps> = ({
   return (
     <div className="tinymce-wrapper">
       <Editor
-        apiKey="l9eggsyzrbz8rp43h8cef3n04nmjd181wr17tcwm0x6hwu6b"
+        apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
         onInit={(evt, editor) => {
           editorRef.current = editor;
         }}

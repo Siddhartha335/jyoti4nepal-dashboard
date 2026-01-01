@@ -1,6 +1,6 @@
 import {z} from "zod";
 
-export const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
+export const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"] as const;
 
 // For browser File validation
@@ -23,7 +23,7 @@ export const TeamSchema = z.object({
     .refine((file) => {
       if (!file) return true;
       return file.size <= MAX_IMAGE_SIZE;
-    }, "Image must be under 4MB.")
+    }, "Image must be under 10MB.")
     .optional(),
   role: z.string().min(1, "Role is required."),
   status: z.enum(["Draft", "Published"]),

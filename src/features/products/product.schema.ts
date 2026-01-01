@@ -1,6 +1,6 @@
 import {z} from "zod";
 
-export const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+export const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg"] as const;
 
 export const ProductSchema = z.object({
@@ -13,7 +13,7 @@ export const ProductSchema = z.object({
           (file) => !file || (file && ACCEPTED_IMAGE_TYPES.includes(file.type as typeof ACCEPTED_IMAGE_TYPES[number])),
           "Only JPG, PNG, SVG or WEBP images are allowed."
         )
-        .refine((file) => !file || file.size <= MAX_IMAGE_SIZE, "Image must be under 2MB.")
+        .refine((file) => !file || file.size <= MAX_IMAGE_SIZE, "Image must be under 10MB.")
         .optional(),
     status: z.enum(["Draft", "Published"]),
     tags: z.array(z.string().min(1)).max(10, "You can add up to 10 tags.").optional(),

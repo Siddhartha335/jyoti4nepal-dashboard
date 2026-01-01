@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useOne, useUpdate, useList } from "@refinedev/core";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import TinyMCEEditorComponent from "@components/TinyMCEEditor";
 
 import {
   BlogSchema,
@@ -208,10 +209,15 @@ const EditBlogPage = () => {
           {/* Content */}
           <div>
             <label className="mb-2 block text-sm font-semibold text-[#65421E]">Content</label>
-            <textarea
+            {/* <textarea
               {...register("content")}
               rows={14}
               className="w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none focus:border-gray-300"
+            /> */}
+            <TinyMCEEditorComponent
+              value={watch("content")}
+              onChange={(content) => setValue("content", content, { shouldValidate: true })}
+              height={400}
             />
             {errors.content && (
               <p className="mt-1 text-xs text-red-600">{errors.content.message}</p>
