@@ -6,7 +6,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import { useUpdate, useOne } from "@refinedev/core";
-import { X, ImageIcon, ArrowLeft, Loader2 } from "lucide-react";
+import { X, ImageIcon, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 
 import { TeamSchema, type Team } from "@features/teams/team.schema";
 
@@ -22,6 +22,7 @@ const EditTeamPage = () => {
 
   const { mutateAsync, isLoading: isUpdating } = useUpdate<Team>();
   const [preview, setPreview] = useState<string | null>(null);
+  const [isHeicFile, setIsHeicFile] = useState(false);
 
   const {
     register,
@@ -196,7 +197,7 @@ const EditTeamPage = () => {
           <div className="rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-5 h-full flex flex-col">
             <h3 className="text-sm font-semibold text-gray-800 mb-4">
               Image
-              {preview && !preview.startsWith("blob:") && (
+              {preview && !preview.startsWith("blob:") && !isHeicFile && (
                 <span className="ml-2 text-xs text-gray-500 font-normal">
                   (Upload new to replace)
                 </span>
@@ -208,7 +209,30 @@ const EditTeamPage = () => {
               control={control}
               render={({ field: { onChange } }) => (
                 <div className="flex-1 flex flex-col justify-center items-center border-2 border-dashed border-[#E1DED1] rounded-lg bg-white py-10 text-center relative">
-                  {preview ? (
+                  {isHeicFile ? (
+                    <div className="px-4 py-6">
+                      <AlertCircle className="h-12 w-12 text-amber-500 mb-3 mx-auto" />
+                      <p className="text-sm font-medium text-gray-700 mb-2">HEIC File Selected</p>
+                      <p className="text-xs text-gray-500">Preview not available</p>
+                      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-xs text-amber-800 flex items-center justify-center gap-2">
+                          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                          Image will be automatically converted to JPEG after upload
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreview(null);
+                          setIsHeicFile(false);
+                          onChange(undefined);
+                        }}
+                        className="mt-3 bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-red-600"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : preview ? (
                     <>
                       <img
                         src={preview}
@@ -219,6 +243,7 @@ const EditTeamPage = () => {
                         type="button"
                         onClick={() => {
                           setPreview(null);
+                          setIsHeicFile(false);
                           onChange(undefined);
                         }}
                         className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
@@ -233,25 +258,42 @@ const EditTeamPage = () => {
                     </>
                   )}
 
-                  <label
-                    htmlFor="file"
-                    className="mt-3 inline-block cursor-pointer rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Choose File
-                  </label>
-                  <input
-                    id="file"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setPreview(URL.createObjectURL(file));
-                        onChange(file);
-                      }
-                    }}
-                  />
+                  {!isHeicFile && (
+                    <>
+                      <label
+                        htmlFor="file"
+                        className="mt-3 inline-block cursor-pointer rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Choose File
+                      </label>
+                      <input
+                        id="file"
+                        type="file"
+                        accept="image/*,.heic,.heif"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const isHeic = file.type === 'image/heic' || 
+                                          file.type === 'image/heif' ||
+                                          file.name.toLowerCase().endsWith('.heic') || 
+                                          file.name.toLowerCase().endsWith('.heif');
+                            
+                            setIsHeicFile(isHeic);
+                            
+                            if (!isHeic) {
+                              setPreview(URL.createObjectURL(file));
+                            } else {
+                              setPreview(null);
+                            }
+                            
+                            onChange(file);
+                          }
+                        }}
+                      />
+                    </>
+                  )}
+                  
                   {errors.image && (
                     <p className="mt-2 text-xs text-red-600">
                       {errors.image.message as string}

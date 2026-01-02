@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Upload, Tag as TagIcon } from "lucide-react";
+import { ArrowLeft, Upload, Tag as TagIcon, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,7 @@ const CreateProduct = () => {
 
   const [tagInput, setTagInput] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+  const [isHeicFile, setIsHeicFile] = useState(false);
 
   // Category system
   const [categories, setCategories] = useState<string[]>([]);
@@ -327,7 +328,19 @@ const CreateProduct = () => {
               control={control}
               render={({ field: { onChange } }) => (
                 <div className="flex-1 flex flex-col justify-center items-center border-2 border-dashed border-[#E1DED1] rounded-lg bg-white py-10 text-center">
-                  {preview ? (
+                  {isHeicFile ? (
+                    <div className="px-4">
+                      <AlertCircle className="h-12 w-12 text-amber-500 mb-3 mx-auto" />
+                      <p className="text-sm font-medium text-gray-700 mb-2">HEIC File Selected</p>
+                      <p className="text-xs text-gray-500">Preview not available</p>
+                      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-xs text-amber-800 flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                          Image will be automatically converted to JPEG after upload
+                        </p>
+                      </div>
+                    </div>
+                  ) : preview ? (
                     <img
                       src={preview}
                       alt="Preview"
@@ -348,12 +361,24 @@ const CreateProduct = () => {
                   <input
                     id="file"
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        setPreview(URL.createObjectURL(file));
+                        const isHeic = file.type === 'image/heic' || 
+                                      file.type === 'image/heif' ||
+                                      file.name.toLowerCase().endsWith('.heic') || 
+                                      file.name.toLowerCase().endsWith('.heif');
+                        
+                        setIsHeicFile(isHeic);
+                        
+                        if (isHeic) {
+                          setPreview(null);
+                        } else {
+                          setPreview(URL.createObjectURL(file));
+                        }
+                        
                         onChange(file);
                       }
                     }}

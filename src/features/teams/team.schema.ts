@@ -1,7 +1,7 @@
 import {z} from "zod";
 
 export const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
-export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"] as const;
+export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml", "image/heic"] as const;
 
 // For browser File validation
 const isFileValid = (file: any): file is File => {
@@ -19,7 +19,7 @@ export const TeamSchema = z.object({
     .refine((file) => {
       if (!file) return true;
       return ACCEPTED_IMAGE_TYPES.includes(file.type);
-    }, "Only JPG, PNG, SVG or WEBP images are allowed.")
+    }, "Only JPG, PNG, SVG, HEIC or WEBP images are allowed.")
     .refine((file) => {
       if (!file) return true;
       return file.size <= MAX_IMAGE_SIZE;

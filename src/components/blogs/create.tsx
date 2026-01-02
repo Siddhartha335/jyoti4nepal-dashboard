@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Upload, Tag as TagIcon, X } from "lucide-react";
+import { ArrowLeft, Upload, Tag as TagIcon, X, AlertCircle } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCreate, useList } from "@refinedev/core";
@@ -21,6 +21,7 @@ const CreateBlogPage = () => {
   const { mutateAsync, isLoading } = useCreate<BlogFormValues>();
 
   const [tagInput, setTagInput] = useState("");
+  const [isHeicFile, setIsHeicFile] = useState(false);
 
 
   // ✅ Fetch active users for author field
@@ -232,11 +233,24 @@ const CreateBlogPage = () => {
 
                 React.useEffect(() => {
                   if (value instanceof File) {
-                    const url = URL.createObjectURL(value);
-                    setPreview(url);
-                    return () => URL.revokeObjectURL(url);
+                    const isHeic = value.type === 'image/heic' || 
+                                  value.type === 'image/heif' ||
+                                  value.name.toLowerCase().endsWith('.heic') || 
+                                  value.name.toLowerCase().endsWith('.heif');
+                    
+                    setIsHeicFile(isHeic);
+                    
+                    if (!isHeic) {
+                      const url = URL.createObjectURL(value);
+                      setPreview(url);
+                      return () => URL.revokeObjectURL(url);
+                    } else {
+                      setPreview(null);
+                    }
+                  } else {
+                    setPreview(null);
+                    setIsHeicFile(false);
                   }
-                  setPreview(null);
                 }, [value]);
 
                 const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -247,7 +261,19 @@ const CreateBlogPage = () => {
                 return (
                   <>
                     <div className="rounded-xl border-2 border-dashed border-gray-300 bg-white p-4 text-center">
-                      {preview ? (
+                      {isHeicFile ? (
+                        <div className="px-4 py-6">
+                          <AlertCircle className="h-12 w-12 text-amber-500 mb-3 mx-auto" />
+                          <p className="text-sm font-medium text-gray-700 mb-2">HEIC File Selected</p>
+                          <p className="text-xs text-gray-500">Preview not available</p>
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-xs text-amber-800 flex items-center justify-center gap-2">
+                              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                              Image will be automatically converted to JPEG after upload
+                            </p>
+                          </div>
+                        </div>
+                      ) : preview ? (
                         <img
                           src={preview}
                           alt="Cover preview"
@@ -263,7 +289,7 @@ const CreateBlogPage = () => {
                       <input
                         id="cover"
                         type="file"
-                        accept="image/*"
+                        accept="image/*,.heic,.heif"
                         className="hidden"
                         onChange={handleFile}
                       />

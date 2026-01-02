@@ -9,6 +9,7 @@ import {
   ChevronDown,
   FolderPlus,
   X,
+  AlertCircle,
 } from "lucide-react";
 import { useOne, useUpdate } from "@refinedev/core";
 import toast from "react-hot-toast";
@@ -42,6 +43,7 @@ export default function EditGalleryImagePage() {
   const [desc, setDesc] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>(""); // preview for replacement
+  const [isHeicFile, setIsHeicFile] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -52,14 +54,27 @@ export default function EditGalleryImagePage() {
       setDesc(item.image_description || "");
       setPreviewUrl(""); // ensure clean if navigating from another edit
       setSelectedFile(null);
+      setIsHeicFile(false);
     }
   }, [item]);
 
   // Drag & drop
   const handleFileSelection = (file: File) => {
     setSelectedFile(file);
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+    
+    const isHeic = file.type === 'image/heic' || 
+                  file.type === 'image/heif' ||
+                  file.name.toLowerCase().endsWith('.heic') || 
+                  file.name.toLowerCase().endsWith('.heif');
+    
+    setIsHeicFile(isHeic);
+    
+    if (!isHeic) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    } else {
+      setPreviewUrl("");
+    }
   };
 
   const onSelectFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,6 +101,7 @@ export default function EditGalleryImagePage() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setSelectedFile(null);
     setPreviewUrl("");
+    setIsHeicFile(false);
   };
 
   // Update
@@ -186,7 +202,7 @@ export default function EditGalleryImagePage() {
             <input
               ref={inputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               onChange={onSelectFiles}
               className="hidden"
             />
@@ -203,18 +219,32 @@ export default function EditGalleryImagePage() {
       {/* Preview: show new preview if selected; else show current image */}
       <div className="mt-4">
         <div className="group relative mx-auto max-w-md aspect-video overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={
-              selectedFile && previewUrl
-                ? previewUrl
-                : item
-                ? `${BACKEND}${item.image_url}`
-                : ""
-            }
-            alt={selectedFile?.name || item?.image_description || "image"}
-            className="h-full w-full object-contain"
-          />
+          {isHeicFile ? (
+            <div className="flex h-full flex-col items-center justify-center px-4 py-6">
+              <AlertCircle className="h-16 w-16 text-amber-500 mb-4" />
+              <p className="text-base font-medium text-gray-700 mb-2">HEIC File Selected</p>
+              <p className="text-sm text-gray-500 mb-4">Preview not available</p>
+              <div className="w-full max-w-sm p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-800 flex items-center justify-center gap-2">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  Image will be automatically converted to JPEG after upload
+                </p>
+              </div>
+            </div>
+          ) : (
+            <img
+              src={
+                selectedFile && previewUrl
+                  ? previewUrl
+                  : item
+                  ? `${BACKEND}${item.image_url}`
+                  : ""
+              }
+              alt={selectedFile?.name || item?.image_description || "image"}
+              className="h-full w-full object-contain"
+            />
+          )}
+          
           {selectedFile ? (
             <button
               onClick={removeFile}
@@ -223,7 +253,8 @@ export default function EditGalleryImagePage() {
               <X className="h-4 w-4" />
             </button>
           ) : null}
-          {(selectedFile || item) && (
+          
+          {(selectedFile || item) && !isHeicFile && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
               <p className="truncate text-sm text-white">
                 {selectedFile?.name || item?.image_url.split("/").pop()}
@@ -235,6 +266,13 @@ export default function EditGalleryImagePage() {
                   ? new Date(item.updatedAt || item.createdAt).toLocaleString()
                   : ""}
               </p>
+            </div>
+          )}
+          
+          {isHeicFile && selectedFile && (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+              <p className="truncate text-sm text-white">{selectedFile.name}</p>
+              <p className="text-xs text-white/80">{(selectedFile.size / 1024).toFixed(2)} KB</p>
             </div>
           )}
         </div>

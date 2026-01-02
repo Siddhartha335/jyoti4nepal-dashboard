@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useRef, useState } from "react";
-import { ArrowLeft, Upload, Image as ImageIcon, FolderPlus, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, Upload, Image as ImageIcon, FolderPlus, ChevronDown, X, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCreate } from "@refinedev/core";
 import toast from "react-hot-toast";
@@ -12,6 +12,7 @@ export default function UploadImage() {
   const [desc, setDesc] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [isHeicFile, setIsHeicFile] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -20,9 +21,21 @@ export default function UploadImage() {
 
   const handleFileSelection = (file: File) => {
     setSelectedFile(file);
-    // Create preview URL
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+    
+    const isHeic = file.type === 'image/heic' || 
+                  file.type === 'image/heif' ||
+                  file.name.toLowerCase().endsWith('.heic') || 
+                  file.name.toLowerCase().endsWith('.heif');
+    
+    setIsHeicFile(isHeic);
+    
+    if (!isHeic) {
+      // Create preview URL for non-HEIC files
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    } else {
+      setPreviewUrl("");
+    }
   };
 
   const onSelectFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,6 +68,7 @@ export default function UploadImage() {
     }
     setSelectedFile(null);
     setPreviewUrl("");
+    setIsHeicFile(false);
   };
 
   const handleUpload = async () => {
@@ -87,6 +101,7 @@ export default function UploadImage() {
           toast.success("Image uploaded successfully!");
           setSelectedFile(null);
           setPreviewUrl("");
+          setIsHeicFile(false);
           setAlbum("");
           setDesc("");
           router.push("/gallery");
@@ -152,7 +167,7 @@ export default function UploadImage() {
             <input 
               ref={inputRef} 
               type="file" 
-              accept="image/*" 
+              accept="image/*,.heic,.heif" 
               onChange={onSelectFiles} 
               className="hidden" 
             />
@@ -167,20 +182,36 @@ export default function UploadImage() {
       </div>
 
       {/* Image Preview */}
-      {selectedFile && previewUrl && (
+      {selectedFile && (
         <div className="mt-4">
           <div className="group relative mx-auto max-w-md aspect-video overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
-            <img 
-              src={previewUrl} 
-              alt={selectedFile.name}
-              className="h-full w-full object-contain"
-            />
+            {isHeicFile ? (
+              <div className="flex h-full flex-col items-center justify-center px-4 py-6">
+                <AlertCircle className="h-16 w-16 text-amber-500 mb-4" />
+                <p className="text-base font-medium text-gray-700 mb-2">HEIC File Selected</p>
+                <p className="text-sm text-gray-500 mb-4">Preview not available</p>
+                <div className="w-full max-w-sm p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs text-amber-800 flex items-center justify-center gap-2">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    Image will be automatically converted to JPEG after upload
+                  </p>
+                </div>
+              </div>
+            ) : previewUrl ? (
+              <img 
+                src={previewUrl} 
+                alt={selectedFile.name}
+                className="h-full w-full object-contain"
+              />
+            ) : null}
+            
             <button
               onClick={removeFile}
               className="absolute right-2 top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg transition hover:bg-red-600"
             >
               <X className="h-4 w-4" />
             </button>
+            
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
               <p className="truncate text-sm text-white">{selectedFile.name}</p>
               <p className="text-xs text-white/80">{(selectedFile.size / 1024).toFixed(2)} KB</p>

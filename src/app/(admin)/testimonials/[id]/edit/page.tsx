@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Star, Upload } from "lucide-react";
+import { ArrowLeft, Star, Upload, AlertCircle } from "lucide-react";
 import { useOne, useUpdate } from "@refinedev/core";
 import toast from "react-hot-toast";
 
@@ -30,6 +30,7 @@ const EditTestimonial = () => {
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
+  const [isHeicFile, setIsHeicFile] = React.useState(false);
 
   // Fetch existing testimonial data
   const { data, isLoading: isFetching } = useOne<Testimonial>({
@@ -204,11 +205,24 @@ const EditTestimonial = () => {
 
                 React.useEffect(() => {
                   if (value instanceof File) {
-                    const url = URL.createObjectURL(value);
-                    setPreview(url);
-                    return () => URL.revokeObjectURL(url);
+                    const isHeic = value.type === 'image/heic' || 
+                                  value.type === 'image/heif' ||
+                                  value.name.toLowerCase().endsWith('.heic') || 
+                                  value.name.toLowerCase().endsWith('.heif');
+                    
+                    setIsHeicFile(isHeic);
+                    
+                    if (!isHeic) {
+                      const url = URL.createObjectURL(value);
+                      setPreview(url);
+                      return () => URL.revokeObjectURL(url);
+                    } else {
+                      setPreview(null);
+                    }
+                  } else {
+                    setPreview(null);
+                    setIsHeicFile(false);
                   }
-                  setPreview(null);
                 }, [value]);
 
                 const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,7 +233,19 @@ const EditTestimonial = () => {
                 return (
                   <>
                     <div className="rounded-xl border-2 border-dashed border-gray-300 bg-white p-4 text-center">
-                      {preview ? (
+                      {isHeicFile ? (
+                        <div className="px-4 py-6">
+                          <AlertCircle className="h-12 w-12 text-amber-500 mb-3 mx-auto" />
+                          <p className="text-sm font-medium text-gray-700 mb-2">HEIC File Selected</p>
+                          <p className="text-xs text-gray-500">Preview not available</p>
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-xs text-amber-800 flex items-center justify-center gap-2">
+                              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                              Image will be automatically converted to JPEG after upload
+                            </p>
+                          </div>
+                        </div>
+                      ) : preview ? (
                         <div className="mb-3">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -238,7 +264,7 @@ const EditTestimonial = () => {
                       <input
                         id="company_logo"
                         type="file"
-                        accept="image/*"
+                        accept="image/*,.heic,.heif"
                         className="hidden"
                         onChange={handleFile}
                       />

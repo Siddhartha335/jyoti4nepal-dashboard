@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Upload,
   Tag as TagIcon,
+  AlertCircle,
 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
@@ -30,6 +31,12 @@ const EditProductPage = () => {
   const [tagInput, setTagInput] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [existingImage, setExistingImage] = useState<string | null>(null);
+  const [isHeicFile, setIsHeicFile] = useState(false);
+
+  // Category system
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [useExistingCategory, setUseExistingCategory] = useState(true);
 
   const {
     register,
@@ -55,6 +62,27 @@ const EditProductPage = () => {
   const product = Array.isArray(data?.data) ? data?.data[0] : data?.data;
   const tags = watch("tags") || [];
 
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/product/all-categories`
+        );
+        const json = await res.json();
+        const names = json.data?.map((c: any) => c.category) || [];
+        setCategories(names);
+      } catch (err) {
+        console.error("Failed to load categories", err);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   // ✅ Prefill form data when product is loaded
   useEffect(() => {
     if (product) {
@@ -67,8 +95,13 @@ const EditProductPage = () => {
         image: undefined,
       });
       setExistingImage(product.image ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${product.image}` : null);
+      
+      // Check if the product's category exists in fetched categories
+      if (product.category && categories.length > 0) {
+        setUseExistingCategory(categories.includes(product.category));
+      }
     }
-  }, [product, reset]);
+  }, [product, reset, categories]);
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -202,14 +235,70 @@ const EditProductPage = () => {
 
           {/* Category */}
           <div className="rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-5">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
               Category
             </label>
-            <input
-                  {...register("category")}
-                  placeholder="Enter the category"
-                  className="w-full rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm outline-none focus:border-[#CE9F41]"
-                />
+
+            {/* Toggle Buttons */}
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setUseExistingCategory(true);
+                  setValue("category", "");
+                }}
+                className={`px-3 py-2 text-sm rounded-lg border ${
+                  useExistingCategory
+                    ? "border-[#CE9F41] text-[#CE9F41]"
+                    : "border-gray-300 text-gray-600"
+                }`}
+              >
+                Choose Existing
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setUseExistingCategory(false);
+                  setValue("category", "");
+                }}
+                className={`px-3 py-2 text-sm rounded-lg border ${
+                  !useExistingCategory
+                    ? "border-[#CE9F41] text-[#CE9F41]"
+                    : "border-gray-300 text-gray-600"
+                }`}
+              >
+                Create New
+              </button>
+            </div>
+
+            {/* Existing Category Dropdown */}
+            {useExistingCategory ? (
+              <select
+                {...register("category")}
+                disabled={isLoadingCategories}
+                className="w-full rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm outline-none"
+              >
+                <option value="">
+                  {isLoadingCategories
+                    ? "Loading categories..."
+                    : "Select a category"}
+                </option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              // Create New Category Input
+              <input
+                {...register("category")}
+                placeholder="Enter new category"
+                className="w-full rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm outline-none focus:border-[#CE9F41]"
+              />
+            )}
+
             {errors.category && (
               <p className="text-xs text-red-600 mt-1">{errors.category.message}</p>
             )}
@@ -227,25 +316,43 @@ const EditProductPage = () => {
                 render={({ field: { onChange, value }, fieldState: { error } }) => {
                   useEffect(() => {
                     if (value instanceof File) {
-                      const url = URL.createObjectURL(value);
-                      setPreview(url);
-                      return () => URL.revokeObjectURL(url);
+                      const isHeic = value.type === 'image/heic' || 
+                                    value.type === 'image/heif' ||
+                                    value.name.toLowerCase().endsWith('.heic') || 
+                                    value.name.toLowerCase().endsWith('.heif');
+                      
+                      setIsHeicFile(isHeic);
+                      
+                      if (!isHeic) {
+                        const url = URL.createObjectURL(value);
+                        setPreview(url);
+                        return () => URL.revokeObjectURL(url);
+                      } else {
+                        setPreview(null);
+                      }
+                    } else {
+                      setPreview(null);
+                      setIsHeicFile(false);
                     }
-                    setPreview(null);
                   }, [value]);
 
                   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                     const file = e.target.files?.[0];
 
                     if (file) {
-                      // --- Optional validation ----
-                      if (!file.type.startsWith("image/")) {
+                      const isHeic = file.type === 'image/heic' || 
+                                    file.type === 'image/heif' ||
+                                    file.name.toLowerCase().endsWith('.heic') || 
+                                    file.name.toLowerCase().endsWith('.heif');
+
+                      // --- Optional validation (skip for HEIC) ----
+                      if (!isHeic && !file.type.startsWith("image/")) {
                         toast.error("Only image files are allowed.");
                         return;
                       }
 
-                      if (file.size > 2 * 1024 * 1024) {
-                        toast.error("Image size must be less than 2MB.");
+                      if (file.size > 10 * 1024 * 1024) {
+                        toast.error("Image size must be less than 10MB.");
                         return;
                       }
 
@@ -259,7 +366,19 @@ const EditProductPage = () => {
                   return (
                     <div>
                       <div className="border-2 border-dashed border-[#E1DED1] bg-white rounded-xl p-4 text-center">
-                        {displayImage ? (
+                        {isHeicFile ? (
+                          <div className="px-4 py-6">
+                            <AlertCircle className="h-12 w-12 text-amber-500 mb-3 mx-auto" />
+                            <p className="text-sm font-medium text-gray-700 mb-2">HEIC File Selected</p>
+                            <p className="text-xs text-gray-500">Preview not available</p>
+                            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                              <p className="text-xs text-amber-800 flex items-center justify-center gap-2">
+                                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                Image will be automatically converted to JPEG after upload
+                              </p>
+                            </div>
+                          </div>
+                        ) : displayImage ? (
                           <img
                             src={displayImage}
                             alt="Preview"
@@ -276,13 +395,13 @@ const EditProductPage = () => {
                           htmlFor="fileUpload"
                           className="cursor-pointer inline-block rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
-                          {displayImage ? "Change Image" : "Choose File"}
+                          {displayImage || isHeicFile ? "Change Image" : "Choose File"}
                         </label>
 
                         <input
                           id="fileUpload"
                           type="file"
-                          accept="image/*"
+                          accept="image/*,.heic,.heif"
                           className="hidden"
                           onChange={handleFileChange}
                         />

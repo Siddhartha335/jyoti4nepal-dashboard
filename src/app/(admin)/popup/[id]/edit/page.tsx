@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Upload, X } from "lucide-react";
+import { ArrowLeft, Upload, X, AlertCircle } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useOne, useUpdate } from "@refinedev/core";
@@ -13,6 +13,7 @@ const EditPopup = () => {
   const router = useRouter();
   const params = useParams();
   const popupId = params?.id as string;
+  const [isHeicFile, setIsHeicFile] = React.useState(false);
 
   // Fetch existing popup data
   const { data: popupData, isLoading: isFetching } = useOne({
@@ -275,10 +276,24 @@ const EditPopup = () => {
 
                 React.useEffect(() => {
                   if (value instanceof File) {
-                    const url = URL.createObjectURL(value);
-                    setPreview(url);
-                    setMediaType(value.type.startsWith('image/') ? 'image' : 'video');
-                    return () => URL.revokeObjectURL(url);
+                    const isHeic = value.type === 'image/heic' || 
+                                  value.type === 'image/heif' ||
+                                  value.name.toLowerCase().endsWith('.heic') || 
+                                  value.name.toLowerCase().endsWith('.heif');
+                    
+                    setIsHeicFile(isHeic);
+                    
+                    if (!isHeic) {
+                      const url = URL.createObjectURL(value);
+                      setPreview(url);
+                      setMediaType(value.type.startsWith('image/') ? 'image' : 'video');
+                      return () => URL.revokeObjectURL(url);
+                    } else {
+                      setPreview(null);
+                      setMediaType('image');
+                    }
+                  } else {
+                    setIsHeicFile(false);
                   }
                 }, [value]);
 
@@ -295,12 +310,33 @@ const EditPopup = () => {
                       ? existingMediaUrl.match(/\.(mp4|webm|ogg)$/i) ? 'video' : 'image'
                       : null
                   );
+                  setIsHeicFile(false);
                 };
 
                 return (
                   <>
                     <div className="rounded-xl border-2 border-dashed border-gray-300 bg-white p-6 text-center">
-                      {preview ? (
+                      {isHeicFile ? (
+                        <div className="px-4 py-6">
+                          <AlertCircle className="h-12 w-12 text-amber-500 mb-3 mx-auto" />
+                          <p className="text-sm font-medium text-gray-700 mb-2">HEIC File Selected</p>
+                          <p className="text-xs text-gray-500 mb-3">Preview not available</p>
+                          <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-xs text-amber-800 flex items-center justify-center gap-2">
+                              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                              Image will be automatically converted to JPEG after upload
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={removeFile}
+                            className="inline-flex items-center gap-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs text-white hover:bg-red-600"
+                          >
+                            <X className="h-3 w-3" />
+                            Remove
+                          </button>
+                        </div>
+                      ) : preview ? (
                         <div className="relative">
                           {mediaType === 'image' ? (
                             <img
@@ -333,20 +369,24 @@ const EditPopup = () => {
                         </div>
                       )}
 
-                      <input
-                        id="media"
-                        type="file"
-                        accept="image/*,video/*"
-                        className="hidden"
-                        onChange={handleFile}
-                      />
+                      {!isHeicFile && (
+                        <>
+                          <input
+                            id="media"
+                            type="file"
+                            accept="image/*,video/*,.heic,.heif"
+                            className="hidden"
+                            onChange={handleFile}
+                          />
 
-                      <label
-                        htmlFor="media"
-                        className="inline-block cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        {preview ? "Change File" : "Choose File"}
-                      </label>
+                          <label
+                            htmlFor="media"
+                            className="inline-block cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            {preview ? "Change File" : "Choose File"}
+                          </label>
+                        </>
+                      )}
                     </div>
 
                     {errors.media?.message && (
