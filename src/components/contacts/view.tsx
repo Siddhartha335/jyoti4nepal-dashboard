@@ -343,15 +343,26 @@ const ViewContacts = () => {
                 />
               </div>
 
-              <a
-                href={`${process.env.NEXT_PUBLIC_BACKEND_URL}${contact.sketch}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-2 text-sm text-[#7B5B12] hover:underline"
-              >
-                View full size
-                <ArrowLeft className="h-3 w-3 rotate-180" />
-              </a>
+              <div className="flex justify-between">
+                <a
+                  href={`${process.env.NEXT_PUBLIC_BACKEND_URL}${contact.sketch}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 text-sm text-[#7B5B12] hover:underline"
+                >
+                  View full size
+                  <ArrowLeft className="h-3 w-3 rotate-180" />
+                </a>
+                <a
+                  href={`${process.env.NEXT_PUBLIC_BACKEND_URL}${contact.sketch}?download=true`}
+                  download={`sketch-${contact.firstname}-${contact.lastname}.${contact.sketch.split('.').pop()}`}
+                  className="mt-3 inline-flex items-center gap-2 text-sm text-[#7B5B12] hover:underline"
+                >
+                  Download the Sketch
+                  <ArrowLeft className="h-3 w-3 rotate-180" />
+                </a>
+              </div>
+
             </div>
           )}
 
