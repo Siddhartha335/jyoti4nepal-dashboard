@@ -110,18 +110,28 @@ const EditProductPage = () => {
     setTagInput("");
   };
 
-  const removeTag = (t: string) => {
-    setValue(
-      "tags",
-      (tags as string[]).filter((x) => x !== t)
-    );
-  };
+const removeTag = (tag: string) => {
+  const currentTags = watch("tags") || [];
+  const newTags = currentTags.filter((t) => t !== tag);
+
+  setValue("tags", newTags, {
+    shouldDirty: true,
+    shouldValidate: true,
+  });
+};
+
 
   const submitWithStatus =
     (status: Product["status"]) =>
     handleSubmit(async (formData) => {
       try {
-        const payload = { ...formData, status };
+        const payload = { 
+          ...formData,
+          status,
+          tags: formData.tags ?? []
+          };
+
+        console.log("Submitting tags:", payload.tags);  
 
         await mutateAsync({
           resource: "product",

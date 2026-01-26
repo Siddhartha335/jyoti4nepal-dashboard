@@ -50,7 +50,7 @@ const CreateTestimonial = () => {
         values: {
           company_logo: values.company_logo,
           name: values.name,
-          email: values.email,
+          email: values.email === "" ? undefined : values.email,
           content: values.content,
           rating: values.rating,
           featured: values.featured,
@@ -128,7 +128,8 @@ const CreateTestimonial = () => {
           {/* Email */}
           <div>
             <label className="mb-2 block text-sm font-semibold text-gray-800">
-              Email <span className="text-red-500">*</span>
+              Email 
+              {/* <span className="text-red-500">*</span> */}
             </label>
             <input
               {...register("email")}
