@@ -20,6 +20,7 @@ const CreateProduct = () => {
   const [tagInput, setTagInput] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [isHeicFile, setIsHeicFile] = useState(false);
+  const [previews, setPreviews] = useState<{ url: string; isHeic: boolean }[]>([]);
 
   // Category system
   const [categories, setCategories] = useState<string[]>([]);
@@ -60,7 +61,7 @@ const CreateProduct = () => {
       name: "",
       description: "",
       category: "",
-      image: undefined,
+      images: undefined,
       status: "Draft",
       tags: [],
     },
@@ -82,6 +83,17 @@ const CreateProduct = () => {
       "tags",
       tags.filter((t) => t !== tag)
     );
+  };
+
+  const removeImage = (index: number, currentImages: File[], onChange: (...event: any[]) => void) => {
+    const newImages = [...currentImages];
+    newImages.splice(index, 1);
+    
+    const newPreviews = [...previews];
+    newPreviews.splice(index, 1);
+    
+    setPreviews(newPreviews);
+    onChange(newImages);
   };
 
   // Submit logic
@@ -318,81 +330,79 @@ const CreateProduct = () => {
           </div>
         </div>
 
-        {/* Right Column - Image Upload */}
-        <div>
-          <div className="rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-5 h-full flex flex-col">
-            <h3 className="text-sm font-semibold text-gray-800 mb-4">Image</h3>
+        {/* Right Column - Multiple Image Upload */}
+      <div className="rounded-2xl border border-[#E1DED1] bg-[#F7F6F3] p-5 h-full flex flex-col">
+        <h3 className="text-sm font-semibold text-gray-800 mb-4">Product Gallery</h3>
 
-            <Controller
-              name="image"
-              control={control}
-              render={({ field: { onChange } }) => (
-                <div className="flex-1 flex flex-col justify-center items-center border-2 border-dashed border-[#E1DED1] rounded-lg bg-white py-10 text-center">
-                  {isHeicFile ? (
-                    <div className="px-4">
-                      <AlertCircle className="h-12 w-12 text-amber-500 mb-3 mx-auto" />
-                      <p className="text-sm font-medium text-gray-700 mb-2">HEIC File Selected</p>
-                      <p className="text-xs text-gray-500">Preview not available</p>
-                      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <p className="text-xs text-amber-800 flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                          Image will be automatically converted to JPEG after upload
-                        </p>
+        <Controller
+          name="images" // Changed from "image"
+          control={control}
+          defaultValue={[]}
+          render={({ field: { onChange, value = [] } }) => (
+            <div className="flex-1 flex flex-col">
+              {/* Gallery Preview Grid */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {previews.map((prev, idx) => (
+                  <div key={idx} className="relative group aspect-square rounded-lg border border-[#E1DED1] bg-white overflow-hidden">
+                    {prev.isHeic ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center p-2">
+                        <AlertCircle className="h-8 w-8 text-amber-500 mb-1" />
+                        <span className="text-[10px] text-gray-500">HEIC (No Preview)</span>
                       </div>
-                    </div>
-                  ) : preview ? (
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      className="h-40 w-auto mx-auto rounded-lg object-cover mb-3"
-                    />
-                  ) : (
-                    <>
-                      <Upload className="h-6 w-6 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">Upload image</p>
-                    </>
-                  )}
-                  <label
-                    htmlFor="file"
-                    className="mt-3 inline-block cursor-pointer rounded-lg border border-[#E1DED1] bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Choose File
-                  </label>
+                    ) : (
+                      <img src={prev.url} alt="preview" className="h-full w-full object-cover" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx, value, onChange)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ArrowLeft className="h-3 w-3 rotate-45" /> {/* Using as an 'X' */}
+                    </button>
+                  </div>
+                ))}
+
+                {/* Upload Trigger Square */}
+                <label
+                  htmlFor="file-upload"
+                  className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-[#E1DED1] rounded-lg bg-white cursor-pointer hover:bg-gray-50 transition-colors"
+                >
+                  <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                  <span className="text-xs text-gray-500 font-medium">Add Photo</span>
                   <input
-                    id="file"
+                    id="file-upload"
                     type="file"
+                    multiple // 👈 Essential for multiple selection
                     accept="image/*,.heic,.heif"
                     className="hidden"
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const isHeic = file.type === 'image/heic' || 
-                                      file.type === 'image/heif' ||
-                                      file.name.toLowerCase().endsWith('.heic') || 
-                                      file.name.toLowerCase().endsWith('.heif');
-                        
-                        setIsHeicFile(isHeic);
-                        
-                        if (isHeic) {
-                          setPreview(null);
-                        } else {
-                          setPreview(URL.createObjectURL(file));
-                        }
-                        
-                        onChange(file);
-                      }
+                      const newFiles = Array.from(e.target.files || []);
+                      const updatedFiles = [...value, ...newFiles];
+                      
+                      const newPreviews = newFiles.map(file => {
+                        const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+                        return {
+                          url: isHeic ? "" : URL.createObjectURL(file),
+                          isHeic
+                        };
+                      });
+
+                      setPreviews([...previews, ...newPreviews]);
+                      onChange(updatedFiles);
                     }}
                   />
-                  {errors.image && (
-                    <p className="mt-2 text-xs text-red-600">
-                      {errors.image.message as string}
-                    </p>
-                  )}
-                </div>
+                </label>
+              </div>
+
+              {errors.images && (
+                <p className="mt-2 text-xs text-red-600">
+                  {errors.images.message as string}
+                </p>
               )}
-            />
-          </div>
-        </div>
+            </div>
+          )}
+        />
+      </div>
       </form>
     </div>
   );

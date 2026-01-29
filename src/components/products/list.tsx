@@ -27,6 +27,7 @@ type Product = {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  images:string[];
 };
 
 function useDebounced<T>(value: T, delay = 400) {
@@ -247,7 +248,7 @@ const ListProducts = () => {
                   <th className="px-5 py-3 font-medium">Product Name</th>
                   <th className="px-5 py-3 font-medium">Category</th>
                   <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium">Image</th>
+                  <th className="px-5 py-3 font-medium">Images</th>
                   <th className="px-5 py-3 font-medium">Tags</th>
                   <th className="px-5 py-3 font-medium">Created</th>
                   <th className="px-5 py-3 font-medium">Actions</th>
@@ -281,12 +282,14 @@ const ListProducts = () => {
 
                     {/* Image */}
                     <td className="bg-white px-5 py-3 text-sm shadow-sm">
-                      {p.image ? (
-                        <img
-                          src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${p.image}`}
+                      {p.images ? (
+                        p.images.map((image) => (
+                          <img
+                          src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${image}`}
                           alt={p.name}
                           className="h-10 w-10 rounded object-cover"
-                        />
+                          />
+                        ))
                       ) : (
                         <ImageIcon className="h-6 w-6 text-gray-400" />
                       )}

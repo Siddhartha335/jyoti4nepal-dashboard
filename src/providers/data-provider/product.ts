@@ -15,9 +15,18 @@ export function toFormData(variables: any) {
     form.append("tags", JSON.stringify(variables.tags));
   }
 
-  // ✅ File field (match backend: "image")
-  if (variables.image instanceof File) {
-    form.append("image", variables.image);
+  // ✅ Handle existing images (Paths to keep)
+  if (variables.existingImages && Array.isArray(variables.existingImages)) {
+    variables.existingImages.forEach((path: string) => {
+      form.append("existingImages", path);
+    });
+  }
+
+  // ✅ Handle new file uploads
+  if (variables.images && Array.isArray(variables.images)) {
+    variables.images.forEach((file: File) => {
+      form.append("images", file); 
+    });
   }
 
   return form;
