@@ -138,7 +138,7 @@ const ListTeams = () => {
     if (!deleteModal.teamId) return;
 
     deleteTeam(
-      { resource: "teams", id: deleteModal.teamId },
+      { resource: "team", id: deleteModal.teamId },
       {
         onSuccess: () => {
           toast.success("Team member deleted successfully");
